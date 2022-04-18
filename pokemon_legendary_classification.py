@@ -85,26 +85,21 @@ print(num_combats == total_wins)
 # %% [markdown]
 # # kNN classification - Predicting legendary status from pokemon stats (HP, Defense, ..., num_wins_in_combat)
 
-# %% [markdown]
-# ## Extra granularity - building a model without total stats, looking at each stat individually.
-
 # %%
 from sklearn.preprocessing import StandardScaler
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, cross_val_score
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.metrics import confusion_matrix
 
 # %%
 pkmn_join_copy = pkmn_join.copy(deep=True)
-# Drop Total Stats column as we have more granularity if we look at each stat individually.  We can consider building a model that looks at total stats later on and compare performance to the model we build now.
-pkmn_join_copy.drop('Total Stats', axis=1, inplace=True)
 
-numeric_cols_labels = ['HP', 'Attack', 'Defense', 'Sp. Atk', 'Sp. Def', 'Speed', 'Wins']
+numeric_cols_labels = ['Total Stats', 'HP', 'Attack', 'Defense', 'Sp. Atk', 'Sp. Def', 'Speed', 'Wins']
 
 numeric_cols = pkmn_join_copy.loc[:, numeric_cols_labels]
 
 # %% [markdown]
-# ### Scale and transform the data
+# ## Scale and transform the data
 
 # %%
 # kNN classification compares Euclidean distance between points when creating the model.  Some of our numeric values are on a larger scale than others, which will have an impact on Euclidean distance, and may disproportionately favor certain columns in the model as a result.  To overcome this issue, we transform our numeric data so all columns are on the same scale.
@@ -113,7 +108,8 @@ scaler.fit(numeric_cols)
 pkmn_join_copy.loc[:, numeric_cols_labels] = scaler.transform(numeric_cols)
 
 # kNN classification requires quantitative values as input.  For categorical data, we can convert to dummy variables, which are quantitative, and allow for the use of categorical data in the model. 
-categorical_cols = pkmn_join_copy.loc[:, ['Generation', 'Type 1', 'Type 2']]
+# Note, we exclude the "Generation" column.  I don't think it's reasonable to know what generation a pokemon comes from when trying to classify it as legendary.
+categorical_cols = pkmn_join_copy.loc[:, ['Type 1', 'Type 2']]
 categorical_cols_labels = list(categorical_cols.columns)
 scaled_with_dummies = pd.get_dummies(pkmn_join_copy.drop(['Number', 'Name', 'Legendary'], axis=1), columns=categorical_cols_labels)
 
@@ -126,30 +122,51 @@ scaled_with_dummies.head()
 # %%
 scaled_with_dummies.columns
 
-# %%
+# %% [markdown]
+# ## Which numerical features are most highly correlated with a pokemon being legendary?
 
 # %%
+pkmn_corr = pkmn_join_copy.corr()
+
+# %%
+sns.heatmap(pkmn_corr, cmap='Reds')
+
+# %%
+# Legendary seems most highly correlated with Total Stats, Sp. Atk, Sp. Def, Attack, Speed, and Wins
+pkmn_corr['Legendary'].sort_values(ascending=False)
+
+# %%
+most_corr_num_features = pkmn_corr['Legendary'].sort_values(ascending=False)[1:7].index.values
+
+# %%
+sns.pairplot(pkmn_join_copy[['Total Stats', 'Sp. Atk', 'Sp. Def', 'Attack', 'Speed', 'Wins', 'Legendary']], hue='Legendary')
 
 # %% [markdown]
-# ### Train/Test Split
-
-# %%
-X_train, X_test, y_train, y_test = train_test_split(scaled_with_dummies, target_df, test_size=0.2)
+# For most, if not all plots, we see a tendency for Legendary pokemon to cluster in the upper right of each scatter plot, indicating that Legendary pokemon tend to have high stats as compared to non-legendary pokemon.  Focusing on these features alone would probably be sufficient for classification.
 
 # %% [markdown]
-# ### Creating the model
-
-# %%
-knn = KNeighborsClassifier(n_neighbors=3)
-knn.fit(X_train, y_train)
-knn.score(X_test, y_test)
+# ## Building Models
 
 # %% [markdown]
-# ### Evaluating model performance
+# ### Creating Model using all features except total stats.
+#
+# First, I'm going to consider building a model that can look at each stat individually.  I expect having the extra granularity here may help build a better model.  I'll first start using all available features, but then see what happens when I narrow down to focusing on the numerical values that are most highly correlated with legendary: Sp. Atk, Sp. Def, Attack, Speed, and Wins
 
 # %%
+# Drop Total Stats column as we have more granularity if we look at each stat individually.  We can consider building a model that looks at total stats later on and compare performance to the model we build now.
+scaled_with_dummies_no_total = scaled_with_dummies.drop('Total Stats', axis=1)
+
+# %%
+scaled_with_dummies_no_total.head()
+
+# %% [markdown]
+# #### Evaluating model performance - Which n_neighbors is most optimal?
+
+# %%
+X_train, X_test, y_train, y_test = train_test_split(scaled_with_dummies_no_total, target_df, test_size=0.2, random_state=5)
 training_scores = []
-k_values = np.arange(3, 21, 2)
+# To avoid potential ties, we only choose odd values for k
+k_values = np.arange(3, 100, 2)
 for k in k_values:
     knn = KNeighborsClassifier(n_neighbors=k)
     knn.fit(X_train, y_train)
@@ -159,9 +176,94 @@ plt.scatter(k_values, training_scores, color='red', marker='x')
 plt.plot(k_values, training_scores)
 
 # %%
-X_train, X_test, y_train, y_test = train_test_split(scaled_with_dummies, target_df, test_size=0.2)
+avg_cross_val_scores = []
+# To avoid potential ties, we only choose odd values for k
+k_values = np.arange(3, 100, 2)
+for k in k_values:
+    knn = KNeighborsClassifier(n_neighbors=k)
+    #knn.fit(X_train, y_train)
+    cross_val_scores = cross_val_score(knn, scaled_with_dummies_no_total, target_df, cv=5)
+    avg_cross_val_score = np.mean(cross_val_scores)
+    avg_cross_val_scores.append(avg_cross_val_score)
+plt.scatter(k_values, avg_cross_val_scores, color='red', marker='x')
+plt.plot(k_values, avg_cross_val_scores)
+
+
+# %% [markdown]
+# If we create a model for values of k from 3 to 100, all using the same train/test split, then check the performance of each model, we see ~92% or better performance for most values of k, with peak performance around k=20.  However, since train/test split is a random process, it's hard to say if the model truly performs best when k=20, or if it just performs best for the particular training/testing data we used.  To overcome this obstacle, we can build many models with different training/testing data and identify which values of k work best most frequently.
+
+# %% [markdown]
+# ##### Creating a function
+
+# %%
+def bootstrap_knn(scaled_df, target_df, num_iterations=1, max_k=10, weight='uniform'):
+    import pandas as pd
+    from sklearn.model_selection import train_test_split
+    from sklearn.neighbors import KNeighborsClassifier
+    
+    # To avoid potential ties, we only choose odd values for k
+    k_values = np.arange(3, max_k, 2)
+    scores_df = pd.DataFrame(index=k_values)
+    
+    for i in range(num_iterations):
+        X_train, X_test, y_train, y_test = train_test_split(scaled_df, target_df, test_size=0.2)
+        training_scores = []
+        
+        for k in k_values:
+            knn = KNeighborsClassifier(n_neighbors=k, weights=weight)
+            knn.fit(X_train, y_train)
+            new_score = knn.score(X_test, y_test)
+            training_scores.append(new_score)
+        
+        col_label = "iter" + str(i)
+        scores_df[col_label] = training_scores
+    
+    scores_df = scores_df.rename_axis('k')
+    return scores_df
+
+
+# %%
+def get_n_neighbors_counts(input_df):
+    import pandas as pd
+    min_k_vals = []
+    for col in input_df.columns:
+        # Get index of first entry that has a max value in input_df[col]
+        min_k_val = input_df[col].idxmax()
+        min_k_vals.append(min_k_val)
+    k_counts = pd.Series(min_k_vals).value_counts()
+    k_counts_sorted = k_counts.sort_index()
+    return k_counts_sorted
+
+
+# %% [markdown]
+# #### Model using uniform weights
+
+# %%
+iterations = 50
+high_k = 60
+
+# %%
+experiments_uniform = bootstrap_knn(scaled_with_dummies_no_total, target_df, num_iterations=iterations, max_k=high_k)
+
+# %%
+experiments_uniform.head()
+
+# %%
+get_n_neighbors_counts(experiments_uniform)
+
+# %%
+get_n_neighbors_counts(experiments_uniform).plot(kind='bar')
+
+# %% [markdown]
+# Because k=3 scored the best in regards to model performance for the vast majority of models that were built, we'll use k=3 in our final model.
+
+# %% [markdown]
+# #### Model using weighted distances
+
+# %%
+X_train, X_test, y_train, y_test = train_test_split(scaled_with_dummies_no_total, target_df, test_size=0.2, random_state=5)
 training_scores = []
-k_values = np.arange(3, 21, 2)
+k_values = np.arange(3, 101, 2)
 for k in k_values:
     knn = KNeighborsClassifier(n_neighbors=k, weights='distance')
     knn.fit(X_train, y_train)
@@ -169,6 +271,200 @@ for k in k_values:
     training_scores.append(new_score)
 plt.scatter(k_values, training_scores, color='red', marker='x')
 plt.plot(k_values, training_scores)
+
+# %%
+avg_cross_val_scores = []
+# To avoid potential ties, we only choose odd values for k
+k_values = np.arange(3, 100, 2)
+for k in k_values:
+    knn = KNeighborsClassifier(n_neighbors=k, weights='distance')
+    #knn.fit(X_train, y_train)
+    cross_val_scores = cross_val_score(knn, scaled_with_dummies_no_total, target_df, cv=5)
+    avg_cross_val_score = np.mean(cross_val_scores)
+    avg_cross_val_scores.append(avg_cross_val_score)
+plt.scatter(k_values, avg_cross_val_scores, color='red', marker='x')
+plt.plot(k_values, avg_cross_val_scores)
+
+# %%
+experiments_distance = bootstrap_knn(scaled_with_dummies, target_df, num_iterations=iterations, max_k=high_k, weight='distance')
+
+# %%
+get_n_neighbors_counts(experiments_distance)
+
+# %%
+get_n_neighbors_counts(experiments_distance).plot(kind='bar')
+
+# %% [markdown]
+# ### Creating Model with all features, except HP, Attack, Defense, Sp. Attack, and Sp. Defense are swapped for an aggregate called total_stats.  Our model might not need that level of granularity to perform well.
+
+# %%
+stats_labels = numeric_cols_labels[1:]
+scaled_with_dummies_total = scaled_with_dummies.drop(stats_labels, axis=1)
+
+# %%
+X_train, X_test, y_train, y_test = train_test_split(scaled_with_dummies_total, target_df, test_size=0.2, random_state=5)
+training_scores = []
+k_values = np.arange(3, 101, 2)
+for k in k_values:
+    knn = KNeighborsClassifier(n_neighbors=k, weights='distance')
+    knn.fit(X_train, y_train)
+    new_score = knn.score(X_test, y_test)
+    training_scores.append(new_score)
+plt.scatter(k_values, training_scores, color='red', marker='x')
+plt.plot(k_values, training_scores)
+
+# %%
+avg_cross_val_scores = []
+# To avoid potential ties, we only choose odd values for k
+k_values = np.arange(3, 100, 2)
+for k in k_values:
+    knn = KNeighborsClassifier(n_neighbors=k, weights='distance')
+    #knn.fit(X_train, y_train)
+    cross_val_scores = cross_val_score(knn, scaled_with_dummies_total, target_df, cv=5)
+    avg_cross_val_score = np.mean(cross_val_scores)
+    avg_cross_val_scores.append(avg_cross_val_score)
+plt.scatter(k_values, avg_cross_val_scores, color='red', marker='x')
+plt.plot(k_values, avg_cross_val_scores)
+
+# %%
+total_stats_w_distance = bootstrap_knn(scaled_with_dummies_total, target_df, num_iterations=iterations, max_k=high_k, weight='distance')
+
+# %%
+get_n_neighbors_counts(total_stats_w_distance)
+
+# %%
+get_n_neighbors_counts(total_stats_w_distance).plot(kind='bar')
+
+# %% [markdown]
+# So far all signs point to k=3 or k=5 being a number that will frequently produce a model that scores highest
+
+# %% [markdown]
+# ### Creating model that focuses solely on numerical values that were highly correlated with legendary: Total Stats, Sp. Atk, Sp. Def, Attack, Speed, and Wins
+
+# %% [markdown]
+# #### Model using Total Stats and Wins
+
+# %%
+total_stats_and_wins = scaled_with_dummies[['Total Stats', 'Wins']]
+
+# %%
+X_train, X_test, y_train, y_test = train_test_split(total_stats_and_wins, target_df, test_size=0.2, random_state=5)
+training_scores = []
+k_values = np.arange(3, 101, 2)
+for k in k_values:
+    knn = KNeighborsClassifier(n_neighbors=k, weights='distance')
+    knn.fit(X_train, y_train)
+    new_score = knn.score(X_test, y_test)
+    training_scores.append(new_score)
+plt.scatter(k_values, training_scores, color='red', marker='x')
+plt.plot(k_values, training_scores)
+
+# %%
+avg_cross_val_scores = []
+# To avoid potential ties, we only choose odd values for k
+k_values = np.arange(3, 100, 2)
+for k in k_values:
+    knn = KNeighborsClassifier(n_neighbors=k, weights='distance')
+    #knn.fit(X_train, y_train)
+    cross_val_scores = cross_val_score(knn, total_stats_and_wins, target_df, cv=5)
+    avg_cross_val_score = np.mean(cross_val_scores)
+    avg_cross_val_scores.append(avg_cross_val_score)
+plt.scatter(k_values, avg_cross_val_scores, color='red', marker='x')
+plt.plot(k_values, avg_cross_val_scores)
+
+# %% [markdown]
+# #### Model using Sp. Atk, Sp. Def, Attack, Speed, and Wins
+
+# %%
+individual_stats_and_wins = scaled_with_dummies[['Sp. Atk', 'Sp. Def', 'Attack', 'Speed', 'Wins']]
+
+# %%
+X_train, X_test, y_train, y_test = train_test_split(individual_stats_and_wins, target_df, test_size=0.2, random_state=5)
+training_scores = []
+k_values = np.arange(3, 101, 2)
+for k in k_values:
+    knn = KNeighborsClassifier(n_neighbors=k, weights='distance')
+    knn.fit(X_train, y_train)
+    new_score = knn.score(X_test, y_test)
+    training_scores.append(new_score)
+plt.scatter(k_values, training_scores, color='red', marker='x')
+plt.plot(k_values, training_scores)
+
+# %%
+avg_cross_val_scores = []
+# To avoid potential ties, we only choose odd values for k
+k_values = np.arange(3, 100, 2)
+for k in k_values:
+    knn = KNeighborsClassifier(n_neighbors=k, weights='distance')
+    #knn.fit(X_train, y_train)
+    cross_val_scores = cross_val_score(knn, individual_stats_and_wins, target_df, cv=5)
+    avg_cross_val_score = np.mean(cross_val_scores)
+    avg_cross_val_scores.append(avg_cross_val_score)
+plt.scatter(k_values, avg_cross_val_scores, color='red', marker='x')
+plt.plot(k_values, avg_cross_val_scores)
+
+# %% [markdown]
+# So far it's looking like we can get very good performance with low k (num_neighbors) and using as few as only two features, Total Stats and Wins
+
+# %% [markdown]
+# # GridSearchCV
+
+# %%
+from sklearn.model_selection import GridSearchCV
+
+# %%
+knn2 = KNeighborsClassifier()
+
+# %%
+param_grid = {'n_neighbors': np.arange(1,101,2)}
+
+# %%
+knn_gscv = GridSearchCV(knn2, param_grid, cv=5)
+
+# %%
+knn_gscv.fit(total_stats_and_wins, target_df)
+
+# %%
+knn_gscv.best_params_, knn_gscv.best_score_
+
+# %%
+
+# %%
+
+# %% [markdown]
+# ## Picking a winner - Creating model using Total Stats and Wins as input features
+
+# %%
+X_train, X_test, y_train, y_test = train_test_split(total_stats_and_wins, target_df, test_size=0.2, random_state=6)
+
+knn_final = KNeighborsClassifier(n_neighbors=5, weights='distance')
+knn_final.fit(X_train, y_train)
+
+# %% [markdown]
+# ### Evaluating Performance
+
+# %%
+from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score, classification_report, ConfusionMatrixDisplay
+
+# %%
+y_preds = knn_final.predict(X_test)
+confusion_matrix(y_test, y_preds)
+
+# %%
+knn_final_score = knn_final.score(X_test, y_test)
+accuracy = accuracy_score(y_test, y_preds)
+f1 = f1_score(y_test, y_preds, pos_label=None, average='weighted')
+precision = precision_score(y_test, y_preds, pos_label=None, average='weighted')
+recall = recall_score(y_test, y_preds, pos_label=None, average='weighted')
+
+# %%
+score, accuracy, f1, precision, recall
+
+# %%
+print(classification_report(y_test, y_preds))
+
+# %%
+ConfusionMatrixDisplay.from_predictions(y_test, y_preds, cmap='Blues', display_labels=['Non-Legendary', 'Legendary'], colorbar=False)
 
 # %%
 
@@ -181,164 +477,7 @@ plt.plot(k_values, training_scores)
 # %%
 
 # %% [markdown]
-# try knn again but take out wins column to see if accuracy goes down.  If it does, then this would be a good example of feature engineering because I added the wins column on my own.
-
-# %%
-pkmn_new = pkmn.copy(deep=True)
-pkmn_new.drop_duplicates(subset='Number', keep='last', inplace=True)
-pkmn_new.drop(labels='Number', axis=1, inplace=True)
-pkmn_new
-
-# %%
-numeric_cols = pkmn_new.select_dtypes(include=[np.int, np.float]).drop('Generation', axis=1)
-new_scaler = StandardScaler()
-new_scaler.fit(numeric_cols)
-new_cols = new_scaler.transform(numeric_cols)
-pkmn_new[list(numeric_cols.columns)] = new_cols
-
-
-target_df = pkmn_new['Legendary']
-pkmn_new.drop(['Legendary', 'Name'], axis=1, inplace=True)
-
-
-
-# %%
-object_cols_labels = list(pkmn_new.select_dtypes(include=object).columns)
-object_cols_labels.append('Generation')
-scaled_with_dummies_2 = pd.get_dummies(pkmn_new, columns=object_cols_labels)
-scaled_with_dummies_2.columns
-
-# %%
-neigh = KNeighborsClassifier(n_neighbors=5)
-neigh.fit(scaled_with_dummies_2, target_df)
-neigh.score(scaled_with_dummies_2, target_df)
-
-# %%
-X_train, X_test, y_train, y_test = train_test_split(scaled_with_dummies_2, target_df, test_size=0.2)
-scores = []
-for k in k_values:
-    neigh = KNeighborsClassifier(n_neighbors=k, weights='distance')
-    neigh.fit(X_train, y_train)
-    score = neigh.score(X_test, y_test)
-    scores.append(score)
-plt.plot(k_values, scores)
-plt.show()
-
-
-preds = neigh.predict(X_test)
-confusion_matrix(y_test, preds)
-
-# %%
-preds = neigh.predict(X_test)
-confusion_matrix(y_test, preds)
-
-# %%
-dropped = scaled_with_dummies_2.drop(['Type 1_Electric', 'Generation_2', 'Type 2_Rock', 'Total'], axis=1)
-dropped
-
-# %%
-
-# %%
-X_train, X_test, y_train, y_test = train_test_split(dropped, target_df, test_size=0.35)
-scores = []
-for k in k_values:
-    neigh = KNeighborsClassifier(n_neighbors=k, weights='distance')
-    neigh.fit(X_train, y_train)
-    score = neigh.score(X_test, y_test)
-    scores.append(score)
-plt.plot(k_values, scores)
-
-# %%
-scaled_with_dummies_2
-
-# %%
-X_train, X_test, y_train, y_test = train_test_split(scaled_with_dummies_2.drop(['HP', 'Attack', 'Defense', 'Sp. Atk', 'Sp. Def'], axis=1), target_df, test_size=0.3)
-scores = []
-for k in k_values:
-    neigh = KNeighborsClassifier(n_neighbors=k, weights='distance')
-    neigh.fit(X_train, y_train)
-    score = neigh.score(X_test, y_test)
-    scores.append(score)
-plt.plot(k_values, scores)
-
-# %%
-target_df_int = target_df.astype(int)
-target_df_int
-
-# %%
-X_train, X_test, y_train, y_test = train_test_split(scaled_with_dummies_2, target_df_int, test_size=0.3)
-scores = []
-for k in k_values:
-    neigh = KNeighborsClassifier(n_neighbors=k, weights='distance')
-    neigh.fit(X_train, y_train)
-    score = neigh.score(X_test, y_test)
-    scores.append(score)
-plt.plot(k_values, scores)
-
-# %%
-new_list = numeric_cols_labels[:]
-new_list.append('Wins')
-
-X_train, X_test, y_train, y_test = train_test_split(scaled_with_dummies[new_list], target_df_int, test_size=0.3)
-scores = []
-for k in k_values:
-    neigh = KNeighborsClassifier(n_neighbors=k, weights='distance')
-    neigh.fit(X_train, y_train)
-    score = neigh.score(X_test, y_test)
-    print(score)
-    scores.append(score)
-plt.plot(k_values, scores)
-
-
-preds = neigh.predict(X_test)
-
-# %%
-y_test
-
-# %%
-new_list
-
-# %%
-scaled_with_dummies
-
-# %%
-from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score, classification_report
-score = neigh.score(X_test, y_test)
-accuracy = accuracy_score(y_test, preds)
-f1 = f1_score(y_test, preds, pos_label=None, average='weighted')
-precision = precision_score(y_test, preds, pos_label=None, average='weighted')
-recall = recall_score(y_test, preds, pos_label=None, average='weighted')
-
-# %%
-score, accuracy, f1, precision, recall
-
-# %%
-print(classification_report(y_test, preds))
-
-# %%
-confusion_matrix(y_test, preds)
-
-# %%
-from sklearn.metrics import plot_confusion_matrix
-
-# %%
-plot_confusion_matrix(neigh, X_test, y_test, display_labels=['Non-Legendary', 'Legendary'], cmap=plt.cm.Blues)
-
-# %%
-plot_confusion_matrix(neigh, X_test, y_test, display_labels=['Non-Legendary', 'Legendary'], cmap=plt.cm.Blues, normalize='true')
-
-# %%
-
-# %%
-
-# %%
-
-# %%
-scaled_with_dummies
-
-# %%
-
-# %%
+# # Logistic Regression - Predicting Legendary Status
 
 # %%
 from sklearn.linear_model import LogisticRegression
@@ -354,9 +493,6 @@ plot_confusion_matrix(lr, X_test, y_test, cmap=plt.cm.Blues)
 # %%
 lr_preds = lr.predict(X_test)
 print(classification_report(y_test, lr_preds))
-
-# %% [markdown]
-# # Logistic Regression - Predicting Legendary Status
 
 # %%
 pkmn_join.corr()
