@@ -173,139 +173,24 @@ scaled_with_dummies_no_total = scaled_with_dummies.drop('Total Stats', axis=1)
 scaled_with_dummies_no_total.head()
 
 # %% [markdown]
-# #### Evaluating model performance - Which n_neighbors is most optimal?
+# #### Which n_neighbors is most optimal and what is the performance?
 
 # %%
-X_train, X_test, y_train, y_test = train_test_split(scaled_with_dummies_no_total, target_df, test_size=0.2, random_state=5)
-training_scores = []
-# To avoid potential ties, we only choose odd values for k
-k_values = np.arange(3, 100, 2)
-for k in k_values:
-    knn = KNeighborsClassifier(n_neighbors=k)
-    knn.fit(X_train, y_train)
-    new_score = knn.score(X_test, y_test)
-    training_scores.append(new_score)
-plt.scatter(k_values, training_scores, color='red', marker='x')
-plt.plot(k_values, training_scores)
+from sklearn.model_selection import GridSearchCV
 
 # %%
-avg_cross_val_scores = []
-# To avoid potential ties, we only choose odd values for k
-k_values = np.arange(3, 100, 2)
-for k in k_values:
-    knn = KNeighborsClassifier(n_neighbors=k)
-    #knn.fit(X_train, y_train)
-    cross_val_scores = cross_val_score(knn, scaled_with_dummies_no_total, target_df, cv=5)
-    avg_cross_val_score = np.mean(cross_val_scores)
-    avg_cross_val_scores.append(avg_cross_val_score)
-plt.scatter(k_values, avg_cross_val_scores, color='red', marker='x')
-plt.plot(k_values, avg_cross_val_scores)
+knn_all_features_no_total = KNeighborsClassifier()
 
+param_grid = {'n_neighbors': np.arange(1,101,2)}
+
+knn_all_features_no_total_gscv = GridSearchCV(knn_all_features_no_total, param_grid, cv=5)
+knn_all_features_no_total_gscv.fit(scaled_with_dummies_no_total, target_df)
+
+print(F"Optimal n_neighbors for model: {knn_all_features_no_total_gscv.best_params_}")
+print(F"Highest model performance: {knn_all_features_no_total_gscv.best_score_}")
 
 # %% [markdown]
-# If we create a model for values of k from 3 to 100, all using the same train/test split, then check the performance of each model, we see ~92% or better performance for most values of k, with peak performance around k=20.  However, since train/test split is a random process, it's hard to say if the model truly performs best when k=20, or if it just performs best for the particular training/testing data we used.  To overcome this obstacle, we can build many models with different training/testing data and identify which values of k work best most frequently.
-
-# %% [markdown]
-# ##### Creating a function
-
-# %%
-def bootstrap_knn(scaled_df, target_df, num_iterations=1, max_k=10, weight='uniform'):
-    import pandas as pd
-    from sklearn.model_selection import train_test_split
-    from sklearn.neighbors import KNeighborsClassifier
-    
-    # To avoid potential ties, we only choose odd values for k
-    k_values = np.arange(3, max_k, 2)
-    scores_df = pd.DataFrame(index=k_values)
-    
-    for i in range(num_iterations):
-        X_train, X_test, y_train, y_test = train_test_split(scaled_df, target_df, test_size=0.2)
-        training_scores = []
-        
-        for k in k_values:
-            knn = KNeighborsClassifier(n_neighbors=k, weights=weight)
-            knn.fit(X_train, y_train)
-            new_score = knn.score(X_test, y_test)
-            training_scores.append(new_score)
-        
-        col_label = "iter" + str(i)
-        scores_df[col_label] = training_scores
-    
-    scores_df = scores_df.rename_axis('k')
-    return scores_df
-
-
-# %%
-def get_n_neighbors_counts(input_df):
-    import pandas as pd
-    min_k_vals = []
-    for col in input_df.columns:
-        # Get index of first entry that has a max value in input_df[col]
-        min_k_val = input_df[col].idxmax()
-        min_k_vals.append(min_k_val)
-    k_counts = pd.Series(min_k_vals).value_counts()
-    k_counts_sorted = k_counts.sort_index()
-    return k_counts_sorted
-
-
-# %% [markdown]
-# #### Model using uniform weights
-
-# %%
-iterations = 50
-high_k = 60
-
-# %%
-experiments_uniform = bootstrap_knn(scaled_with_dummies_no_total, target_df, num_iterations=iterations, max_k=high_k)
-
-# %%
-experiments_uniform.head()
-
-# %%
-get_n_neighbors_counts(experiments_uniform)
-
-# %%
-get_n_neighbors_counts(experiments_uniform).plot(kind='bar')
-
-# %% [markdown]
-# Because k=3 scored the best in regards to model performance for the vast majority of models that were built, we'll use k=3 in our final model.
-
-# %% [markdown]
-# #### Model using weighted distances
-
-# %%
-X_train, X_test, y_train, y_test = train_test_split(scaled_with_dummies_no_total, target_df, test_size=0.2, random_state=5)
-training_scores = []
-k_values = np.arange(3, 101, 2)
-for k in k_values:
-    knn = KNeighborsClassifier(n_neighbors=k, weights='distance')
-    knn.fit(X_train, y_train)
-    new_score = knn.score(X_test, y_test)
-    training_scores.append(new_score)
-plt.scatter(k_values, training_scores, color='red', marker='x')
-plt.plot(k_values, training_scores)
-
-# %%
-avg_cross_val_scores = []
-# To avoid potential ties, we only choose odd values for k
-k_values = np.arange(3, 100, 2)
-for k in k_values:
-    knn = KNeighborsClassifier(n_neighbors=k, weights='distance')
-    #knn.fit(X_train, y_train)
-    cross_val_scores = cross_val_score(knn, scaled_with_dummies_no_total, target_df, cv=5)
-    avg_cross_val_score = np.mean(cross_val_scores)
-    avg_cross_val_scores.append(avg_cross_val_score)
-plt.scatter(k_values, avg_cross_val_scores, color='red', marker='x')
-plt.plot(k_values, avg_cross_val_scores)
-
-# %%
-experiments_distance = bootstrap_knn(scaled_with_dummies, target_df, num_iterations=iterations, max_k=high_k, weight='distance')
-
-# %%
-get_n_neighbors_counts(experiments_distance)
-
-# %%
-get_n_neighbors_counts(experiments_distance).plot(kind='bar')
+# This will establish our baseline.  Let's see if we can build a model that is less complex and performs better.
 
 # %% [markdown]
 # ### Creating Model with all features, except HP, Attack, Defense, Sp. Attack, and Sp. Defense are swapped for an aggregate called total_stats.  Our model might not need to know the individual stats to perform well.
@@ -314,76 +199,23 @@ get_n_neighbors_counts(experiments_distance).plot(kind='bar')
 stats_labels = numeric_cols_labels[1:]
 scaled_with_dummies_total = scaled_with_dummies.drop(stats_labels, axis=1)
 
-# %%
-X_train, X_test, y_train, y_test = train_test_split(scaled_with_dummies_total, target_df, test_size=0.2, random_state=5)
-training_scores = []
-k_values = np.arange(3, 101, 2)
-for k in k_values:
-    knn = KNeighborsClassifier(n_neighbors=k, weights='distance')
-    knn.fit(X_train, y_train)
-    new_score = knn.score(X_test, y_test)
-    training_scores.append(new_score)
-plt.scatter(k_values, training_scores, color='red', marker='x')
-plt.plot(k_values, training_scores)
+# %% [markdown]
+# #### Which n_neighbors is most optimal and what is the performance?
 
 # %%
-avg_cross_val_scores = []
-# To avoid potential ties, we only choose odd values for k
-k_values = np.arange(3, 100, 2)
-for k in k_values:
-    knn = KNeighborsClassifier(n_neighbors=k, weights='distance')
-    #knn.fit(X_train, y_train)
-    cross_val_scores = cross_val_score(knn, scaled_with_dummies_total, target_df, cv=5)
-    avg_cross_val_score = np.mean(cross_val_scores)
-    avg_cross_val_scores.append(avg_cross_val_score)
-plt.scatter(k_values, avg_cross_val_scores, color='red', marker='x')
-plt.plot(k_values, avg_cross_val_scores)
+knn_all_features_with_total = KNeighborsClassifier()
 
-# %%
-total_stats_w_distance = bootstrap_knn(scaled_with_dummies_total, target_df, num_iterations=iterations, max_k=high_k, weight='distance')
+knn_all_features_with_total_gscv = GridSearchCV(knn_all_features_with_total, param_grid, cv=5)
+knn_all_features_with_total_gscv.fit(scaled_with_dummies_total, target_df)
 
-# %%
-get_n_neighbors_counts(total_stats_w_distance)
-
-# %%
-get_n_neighbors_counts(total_stats_w_distance).plot(kind='bar')
+print(F"Optimal n_neighbors for model: {knn_all_features_with_total_gscv.best_params_}")
+print(F"Highest model performance: {knn_all_features_with_total_gscv.best_score_}")
 
 # %% [markdown]
-# So far all signs point to k=3 being a number that will frequently produce a model that scores highest
+# We see worse performance with this model.  It's more complex, with an optimal n_neighbors of 41 and performs slightly worse.
 
 # %% [markdown]
 # ### Creating model that focuses solely on numerical values that were highly correlated with legendary: Total Stats, Sp. Atk, Sp. Def, Attack, Speed, and Wins
-
-# %% [markdown]
-# #### Model using Total Stats and Wins
-
-# %%
-total_stats_and_wins = scaled_with_dummies[['Total Stats', 'Wins']]
-
-# %%
-X_train, X_test, y_train, y_test = train_test_split(total_stats_and_wins, target_df, test_size=0.2, random_state=5)
-training_scores = []
-k_values = np.arange(3, 101, 2)
-for k in k_values:
-    knn = KNeighborsClassifier(n_neighbors=k, weights='distance')
-    knn.fit(X_train, y_train)
-    new_score = knn.score(X_test, y_test)
-    training_scores.append(new_score)
-plt.scatter(k_values, training_scores, color='red', marker='x')
-plt.plot(k_values, training_scores)
-
-# %%
-avg_cross_val_scores = []
-# To avoid potential ties, we only choose odd values for k
-k_values = np.arange(3, 100, 2)
-for k in k_values:
-    knn = KNeighborsClassifier(n_neighbors=k, weights='distance')
-    #knn.fit(X_train, y_train)
-    cross_val_scores = cross_val_score(knn, total_stats_and_wins, target_df, cv=5)
-    avg_cross_val_score = np.mean(cross_val_scores)
-    avg_cross_val_scores.append(avg_cross_val_score)
-plt.scatter(k_values, avg_cross_val_scores, color='red', marker='x')
-plt.plot(k_values, avg_cross_val_scores)
 
 # %% [markdown]
 # #### Model using Sp. Atk, Sp. Def, Attack, Speed, and Wins
@@ -392,140 +224,126 @@ plt.plot(k_values, avg_cross_val_scores)
 individual_stats_and_wins = scaled_with_dummies[['Sp. Atk', 'Sp. Def', 'Attack', 'Speed', 'Wins']]
 
 # %%
-X_train, X_test, y_train, y_test = train_test_split(individual_stats_and_wins, target_df, test_size=0.2, random_state=5)
-training_scores = []
-k_values = np.arange(3, 101, 2)
-for k in k_values:
-    knn = KNeighborsClassifier(n_neighbors=k, weights='distance')
-    knn.fit(X_train, y_train)
-    new_score = knn.score(X_test, y_test)
-    training_scores.append(new_score)
-plt.scatter(k_values, training_scores, color='red', marker='x')
-plt.plot(k_values, training_scores)
+knn_individual_stats_and_wins = KNeighborsClassifier()
 
-# %%
-avg_cross_val_scores = []
-# To avoid potential ties, we only choose odd values for k
-k_values = np.arange(3, 100, 2)
-for k in k_values:
-    knn = KNeighborsClassifier(n_neighbors=k, weights='distance')
-    #knn.fit(X_train, y_train)
-    cross_val_scores = cross_val_score(knn, individual_stats_and_wins, target_df, cv=5)
-    avg_cross_val_score = np.mean(cross_val_scores)
-    avg_cross_val_scores.append(avg_cross_val_score)
-plt.scatter(k_values, avg_cross_val_scores, color='red', marker='x')
-plt.plot(k_values, avg_cross_val_scores)
+knn_individual_stats_and_wins_gscv = GridSearchCV(knn_individual_stats_and_wins, param_grid, cv=5)
+knn_individual_stats_and_wins_gscv.fit(individual_stats_and_wins, target_df)
+
+print(F"Optimal n_neighbors for model: {knn_individual_stats_and_wins_gscv.best_params_}")
+print(F"Highest model performance: {knn_individual_stats_and_wins_gscv.best_score_}")
 
 # %% [markdown]
-# So far it's looking like we can get very good performance with low k (num_neighbors) and using as few as only two features, Total Stats and Wins
+# We're starting to see better performance when we reduce the number of inputs to the model.  Now the optimal n_neighbors is only 15, with slightly better performance than our previous models.
+
+# %% [markdown] tags=[]
+# #### Model using only Total Stats and Wins
+
+# %%
+total_stats_and_wins = scaled_with_dummies[['Total Stats', 'Wins']]
 
 # %% [markdown]
-# # GridSearchCV
+# ##### Which n_neighbors is most optimal and what is the performance?
 
 # %%
-from sklearn.model_selection import GridSearchCV
+knn_total_stats_and_wins = KNeighborsClassifier()
 
-# %%
-knn2 = KNeighborsClassifier()
+knn_total_stats_and_wins_gscv = GridSearchCV(knn_total_stats_and_wins, param_grid, cv=5)
+knn_total_stats_and_wins_gscv.fit(total_stats_and_wins, target_df)
 
-# %%
-param_grid = {'n_neighbors': np.arange(1,101,2)}
-
-# %%
-knn2_gscv = GridSearchCV(knn2, param_grid, cv=5)
-
-# %%
-knn2_gscv.fit(total_stats_and_wins, target_df)
-
-# %%
-knn2_gscv.best_params_, knn2_gscv.best_score_
-
-# %%
-knn3 = KNeighborsClassifier(weights='distance')
-knn3_gscv = GridSearchCV(knn3, param_grid, cv=5)
-knn3_gscv.fit(total_stats_and_wins, target_df)
-
-# %%
-knn3_gscv.best_params_, knn3_gscv.best_score_
+print(F"Optimal n_neighbors for model: {knn_total_stats_and_wins_gscv.best_params_}")
+print(F"Highest model performance: {knn_total_stats_and_wins_gscv.best_score_}")
 
 # %% [markdown]
-# Using n_neighors = 5 and weighting by distance appears to offer the best performance.
+# This model is much less complex, having an optimal n_neighbors of 3, and better performance than our previous models.  It also only requires two input variables.  Using total stats and wins is looking to be our best model so far.
 
 # %% [markdown]
-# ## Picking a winner - Creating model using Total Stats and Wins as input features
-
-# %%
-X_train, X_test, y_train, y_test = train_test_split(total_stats_and_wins, target_df, test_size=0.2, random_state=6)
-
-knn_final = KNeighborsClassifier(n_neighbors=5, weights='distance')
-knn_final.fit(X_train, y_train)
-
-# %% [markdown]
-# ### Evaluating Performance
-
-# %%
-from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score, classification_report, ConfusionMatrixDisplay
-
-# %%
-y_preds = knn_final.predict(X_test)
-confusion_matrix(y_test, y_preds)
-
-# %%
-knn_final_score = knn_final.score(X_test, y_test)
-accuracy = accuracy_score(y_test, y_preds)
-f1 = f1_score(y_test, y_preds, pos_label=None, average='weighted')
-precision = precision_score(y_test, y_preds, pos_label=None, average='weighted')
-recall = recall_score(y_test, y_preds, pos_label=None, average='weighted')
-
-# %%
-knn_final_score, accuracy, f1, precision, recall
-
-# %%
-print(classification_report(y_test, y_preds))
-
-# %%
-ConfusionMatrixDisplay.from_predictions(y_test, y_preds, cmap='Greens', display_labels=['Non-Legendary', 'Legendary'], colorbar=False);
-
-# %%
-total_stats = scaled_with_dummies.loc[:,'Total Stats']
-
-# %% [markdown]
-# # Final model using only total stats
+# #### Model using only total stats
 
 # %%
 total_stats = scaled_with_dummies.loc[:,'Total Stats']
 total_stats = np.array(total_stats).reshape(-1,1)
 
-X_train, X_test, y_train, y_test = train_test_split(total_stats, target_df, test_size=0.2, random_state=6)
+# %%
+knn_total_stats = KNeighborsClassifier()
 
-knn_final2 = KNeighborsClassifier(n_neighbors=5, weights='distance')
-knn_final2.fit(X_train, y_train)
+knn_total_stats_gscv = GridSearchCV(knn_total_stats, param_grid, cv=5)
+knn_total_stats_gscv.fit(total_stats, target_df)
+
+print(F"Optimal n_neighbors for model: {knn_total_stats_gscv.best_params_}")
+print(F"Highest model performance: {knn_total_stats_gscv.best_score_}")
 
 # %% [markdown]
-# ### Evaluating Performance
+# Slightly better performance, with a slightly more complex n_neighbors of 5, but now we only have one input variable.  Using total stats, or total stats and wins, both seem like reasonable choices for our final model.  Let's investigate their performance a little further.
+
+# %% [markdown]
+# ## Further investigating performance of our two top models
+
+# %% [markdown] tags=[]
+# ### Model: Total stats and wins
 
 # %%
 from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score, classification_report, ConfusionMatrixDisplay
 
 # %%
-y_preds = knn_final2.predict(X_test)
+X_train, X_test, y_train, y_test = train_test_split(total_stats_and_wins, target_df, test_size=0.2, random_state=5)
+
+# %%
+knn_total_stats_and_wins.set_params(n_neighbors=3)
+knn_total_stats_and_wins.fit(X_train, y_train)
+y_preds = knn_total_stats_and_wins.predict(X_test)
 confusion_matrix(y_test, y_preds)
 
 # %%
-knn_final2_score = knn_final2.score(X_test, y_test)
+knn_total_stats_and_wins_score = knn_total_stats_and_wins.score(X_test, y_test)
 accuracy = accuracy_score(y_test, y_preds)
 f1 = f1_score(y_test, y_preds, pos_label=None, average='weighted')
 precision = precision_score(y_test, y_preds, pos_label=None, average='weighted')
 recall = recall_score(y_test, y_preds, pos_label=None, average='weighted')
 
 # %%
-knn_final2_score, accuracy, f1, precision, recall
+knn_total_stats_and_wins_score, accuracy, f1, precision, recall
 
 # %%
 print(classification_report(y_test, y_preds))
 
 # %%
 ConfusionMatrixDisplay.from_predictions(y_test, y_preds, cmap='Greens', display_labels=['Non-Legendary', 'Legendary'], colorbar=False);
+
+# %% [markdown]
+# Decent performance, but let's see how our other top model performs.
+
+# %% [markdown]
+# ### Model: Total stats
+
+# %%
+X_train, X_test, y_train, y_test = train_test_split(total_stats, target_df, test_size=0.2, random_state=6)
+
+# %%
+knn_total_stats.set_params(n_neighbors=5)
+knn_total_stats.fit(X_train, y_train)
+y_preds = knn_total_stats.predict(X_test)
+confusion_matrix(y_test, y_preds)
+
+# %%
+knn_total_stats_score = knn_total_stats.score(X_test, y_test)
+accuracy = accuracy_score(y_test, y_preds)
+f1 = f1_score(y_test, y_preds, pos_label=None, average='weighted')
+precision = precision_score(y_test, y_preds, pos_label=None, average='weighted')
+recall = recall_score(y_test, y_preds, pos_label=None, average='weighted')
+
+# %%
+knn_total_stats_score, accuracy, f1, precision, recall
+
+# %%
+print(classification_report(y_test, y_preds))
+
+# %%
+ConfusionMatrixDisplay.from_predictions(y_test, y_preds, cmap='Greens', display_labels=['Non-Legendary', 'Legendary'], colorbar=False);
+
+# %% [markdown]
+# This model looks to perform quite well.  it has ~96% for accuracy, f1, precision, and recall, using only one input.  
+
+# %%
 
 # %%
 
