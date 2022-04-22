@@ -132,7 +132,8 @@ scaled_with_dummies.columns
 pkmn_corr = pkmn_join_copy.corr()
 
 # %%
-sns.heatmap(pkmn_corr, cmap='Reds')
+fig, ax = plt.subplots(1,1, figsize=(9,7))
+sns.heatmap(pkmn_corr, cmap='gist_gray', ax=ax);
 
 # %%
 # Legendary seems most highly correlated with Total Stats, Sp. Atk, Sp. Def, Attack, Speed, and Wins
@@ -343,7 +344,67 @@ ConfusionMatrixDisplay.from_predictions(y_test, y_preds, cmap='Greens', display_
 # %% [markdown]
 # This model looks to perform quite well.  it has ~96% for accuracy, f1, precision, and recall, using only one input.  
 
+# %% [markdown]
+# # How does it perform on pokemon data from generation 7?
+
 # %%
+complete = pd.read_csv("./pokemon_data/complete/pokemon_complete.csv")
+
+# %%
+gen_7 = complete.loc[complete['generation']==7, ['pokedex_number', 'name', 'attack', 'defense', 'hp', 'sp_attack', 'sp_defense', 'speed', 'generation', 'is_legendary']]
+
+# %%
+gen_7.columns
+
+# %%
+gen_7['total_stats'] = gen_7[['attack', 'defense', 'hp', 'sp_attack', 'sp_defense', 'speed']].sum(axis=1)
+
+# %%
+gen_7['total_stats']
+
+# %%
+gen_7['is_legendary'].value_counts()
+
+# %%
+gen_7_total_stats = gen_7.loc[:, 'total_stats']
+gen_7_total_stats = np.array(gen_7_total_stats).reshape(-1, 1)
+
+scaler = StandardScaler()
+scaler.fit(gen_7_total_stats)
+gen_7_total_scaled = scaler.transform(gen_7_total_stats)
+gen_7.loc[:, 'total_stats'] = gen_7_total_scaled
+
+# %%
+gen_7.loc[:, 'is_legendary'] = gen_7.loc[:, 'is_legendary'].astype('bool')
+
+y_preds = knn_total_stats.predict(gen_7_total_scaled)
+confusion_matrix(gen_7['is_legendary'], y_preds)
+
+# %%
+gen_7_total_stats_score = knn_total_stats.score(gen_7_total_scaled, gen_7['is_legendary'])
+accuracy = accuracy_score( gen_7['is_legendary'], y_preds)
+f1 = f1_score( gen_7['is_legendary'], y_preds, pos_label=None, average='weighted')
+precision = precision_score( gen_7['is_legendary'], y_preds, pos_label=None, average='weighted')
+recall = recall_score(gen_7['is_legendary'], y_preds, pos_label=None, average='weighted')
+
+# %%
+gen_7_total_stats_score, accuracy, f1, precision, recall
+
+# %%
+print(classification_report(gen_7['is_legendary'], y_preds))
+
+# %%
+ConfusionMatrixDisplay.from_predictions(gen_7['is_legendary'], y_preds, cmap='Greens', display_labels=['Non-Legendary', 'Legendary'], colorbar=False);
+
+# %% [markdown]
+# The model predicted all non-legendary pokemon correctly, but for some reason is having trouble predicting legendary pokemon.
+
+# %%
+gen_7[gen_7['is_legendary']==False]['total_stats'].hist()
+gen_7[gen_7['is_legendary']==True]['total_stats'].hist(alpha=0.7)
+
+# %%
+gen_7[gen_7['is_legendary']==True].sort_values(by='total_stats')
 
 # %%
 
@@ -355,31 +416,31 @@ ConfusionMatrixDisplay.from_predictions(y_test, y_preds, cmap='Greens', display_
 # %%
 from sklearn.linear_model import LogisticRegression
 
+# %% [markdown]
+# ## Using all features without total stats
+
 # %%
-X_train, X_test, y_train, y_test = train_test_split(scaled_with_dummies, target_df, test_size=0.4)
+X_train, X_test, y_train, y_test = train_test_split(scaled_with_dummies_no_total, target_df, test_size=0.2)
 lr = LogisticRegression().fit(X_train, y_train)
 lr.score(X_test, y_test)
 
 # %%
-plot_confusion_matrix(lr, X_test, y_test, cmap=plt.cm.Blues)
+lr_preds = lr.predict(X_test)
+confusion_matrix(y_test, lr_preds)
 
 # %%
-lr_preds = lr.predict(X_test)
+ConfusionMatrixDisplay.from_estimator(lr, X_test, y_test, cmap=plt.cm.Blues, display_labels=['Non-Legendary', 'Legendary'], colorbar=False)
+
+# %%
 print(classification_report(y_test, lr_preds))
 
-# %%
-pkmn_join.corr()
-
-# %%
-plt.figure(figsize=(10,10))
-sns.heatmap(pkmn_join.corr(), cmap=plt.get_cmap('gist_gray'))
-
 # %% [markdown]
-# Based on the correlation df and heatmap above, Legendary is most highly correlated with the following 3 quantitative variables:
-#     1. Total
-#     2. Sp. Atk
-#     3. Sp. Def
-# As total is the sum of all of the other stats, HP, Attack, Defense, Sp. Atk, Sp. Def, and Speed, I'd expect it to be collinear with the other variables.  Let's check:
+# If we remember from earlier, Legendary is most highly correlated with the following 3 quantitative variables:
+#    1. Total Stats
+#    2. Sp. Atk
+#    3. Sp. Def
+#
+# As total is the sum of all of the other stats, HP, Attack, Defense, Sp. Atk, Sp. Def, and Speed, it is definitely collinear with the other variables.  
 
 # %%
 from statsmodels.stats.outliers_influence import variance_inflation_factor
@@ -393,9 +454,6 @@ variance_inflation_factor(pkmn_copy.loc[:,['HP', 'Attack', 'Defense', 'Sp. Atk',
 
 # %%
 pkmn_copy.loc[:,['HP', 'Attack', 'Defense', 'Sp. Atk', 'Sp. Def', 'Speed', 'Legendary']]
-
-# %%
-X
 
 
 # %%
