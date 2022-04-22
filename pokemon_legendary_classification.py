@@ -13,6 +13,9 @@
 #     name: python3
 # ---
 
+# %% [markdown]
+# # Start
+
 # %%
 import pandas as pd
 import numpy as np
@@ -138,11 +141,21 @@ pkmn_corr['Legendary'].sort_values(ascending=False)
 # %%
 most_corr_num_features = pkmn_corr['Legendary'].sort_values(ascending=False)[1:7].index.values
 
-# %%
+# %% tags=[]
 sns.pairplot(pkmn_join_copy[['Total Stats', 'Sp. Atk', 'Sp. Def', 'Attack', 'Speed', 'Wins', 'Legendary']], hue='Legendary')
 
 # %% [markdown]
-# For most, if not all plots, we see a tendency for Legendary pokemon to cluster in the upper right of each scatter plot, indicating that Legendary pokemon tend to have high stats as compared to non-legendary pokemon.  Focusing on these features alone would probably be sufficient for classification.
+# For most, if not all plots, we see a tendency for Legendary pokemon to cluster in the upper right of each scatter plot, indicating that Legendary pokemon tend to have high stats as compared to non-legendary pokemon.  These features are probably going to be the most important for our model's performance.
+
+# %%
+fig, ax = plt.subplots(1,1)
+pkmn_join_copy[pkmn_join_copy['Legendary']==True].hist(column='Total Stats', ax=ax)
+pkmn_join_copy[pkmn_join_copy['Legendary']==False].hist(column='Total Stats', ax=ax, alpha=0.5)
+plt.legend(['Legendary', 'Non-Legendary'])
+plt.show();
+
+# %% [markdown]
+# Focusing on the aggregated total stats, we see legendary pokemon are towards the top.  This feature alone may be sufficient for our model.
 
 # %% [markdown]
 # ## Building Models
@@ -150,7 +163,7 @@ sns.pairplot(pkmn_join_copy[['Total Stats', 'Sp. Atk', 'Sp. Def', 'Attack', 'Spe
 # %% [markdown]
 # ### Creating Model using all features except total stats.
 #
-# First, I'm going to consider building a model that can look at each stat individually.  I expect having the extra granularity here may help build a better model.  I'll first start using all available features, but then see what happens when I narrow down to focusing on the numerical values that are most highly correlated with legendary: Sp. Atk, Sp. Def, Attack, Speed, and Wins
+# First, I'm going to consider building a model that uses each stat.  The extra granularity here may help build a better model, but it will be more complex as a result.  I'll first start using all available features, but then see what happens when I narrow down to focusing on the numerical values that are most highly correlated with legendary: Sp. Atk, Sp. Def, Attack, Speed, and Wins
 
 # %%
 # Drop Total Stats column as we have more granularity if we look at each stat individually.  We can consider building a model that looks at total stats later on and compare performance to the model we build now.
@@ -295,7 +308,7 @@ get_n_neighbors_counts(experiments_distance)
 get_n_neighbors_counts(experiments_distance).plot(kind='bar')
 
 # %% [markdown]
-# ### Creating Model with all features, except HP, Attack, Defense, Sp. Attack, and Sp. Defense are swapped for an aggregate called total_stats.  Our model might not need that level of granularity to perform well.
+# ### Creating Model with all features, except HP, Attack, Defense, Sp. Attack, and Sp. Defense are swapped for an aggregate called total_stats.  Our model might not need to know the individual stats to perform well.
 
 # %%
 stats_labels = numeric_cols_labels[1:]
@@ -336,7 +349,7 @@ get_n_neighbors_counts(total_stats_w_distance)
 get_n_neighbors_counts(total_stats_w_distance).plot(kind='bar')
 
 # %% [markdown]
-# So far all signs point to k=3 or k=5 being a number that will frequently produce a model that scores highest
+# So far all signs point to k=3 being a number that will frequently produce a model that scores highest
 
 # %% [markdown]
 # ### Creating model that focuses solely on numerical values that were highly correlated with legendary: Total Stats, Sp. Atk, Sp. Def, Attack, Speed, and Wins
@@ -419,17 +432,24 @@ knn2 = KNeighborsClassifier()
 param_grid = {'n_neighbors': np.arange(1,101,2)}
 
 # %%
-knn_gscv = GridSearchCV(knn2, param_grid, cv=5)
+knn2_gscv = GridSearchCV(knn2, param_grid, cv=5)
 
 # %%
-knn_gscv.fit(total_stats_and_wins, target_df)
+knn2_gscv.fit(total_stats_and_wins, target_df)
 
 # %%
-knn_gscv.best_params_, knn_gscv.best_score_
+knn2_gscv.best_params_, knn2_gscv.best_score_
 
 # %%
+knn3 = KNeighborsClassifier(weights='distance')
+knn3_gscv = GridSearchCV(knn3, param_grid, cv=5)
+knn3_gscv.fit(total_stats_and_wins, target_df)
 
 # %%
+knn3_gscv.best_params_, knn3_gscv.best_score_
+
+# %% [markdown]
+# Using n_neighors = 5 and weighting by distance appears to offer the best performance.
 
 # %% [markdown]
 # ## Picking a winner - Creating model using Total Stats and Wins as input features
@@ -458,19 +478,54 @@ precision = precision_score(y_test, y_preds, pos_label=None, average='weighted')
 recall = recall_score(y_test, y_preds, pos_label=None, average='weighted')
 
 # %%
-score, accuracy, f1, precision, recall
+knn_final_score, accuracy, f1, precision, recall
 
 # %%
 print(classification_report(y_test, y_preds))
 
 # %%
-ConfusionMatrixDisplay.from_predictions(y_test, y_preds, cmap='Blues', display_labels=['Non-Legendary', 'Legendary'], colorbar=False)
+ConfusionMatrixDisplay.from_predictions(y_test, y_preds, cmap='Greens', display_labels=['Non-Legendary', 'Legendary'], colorbar=False);
 
 # %%
+total_stats = scaled_with_dummies.loc[:,'Total Stats']
+
+# %% [markdown]
+# # Final model using only total stats
 
 # %%
+total_stats = scaled_with_dummies.loc[:,'Total Stats']
+total_stats = np.array(total_stats).reshape(-1,1)
+
+X_train, X_test, y_train, y_test = train_test_split(total_stats, target_df, test_size=0.2, random_state=6)
+
+knn_final2 = KNeighborsClassifier(n_neighbors=5, weights='distance')
+knn_final2.fit(X_train, y_train)
+
+# %% [markdown]
+# ### Evaluating Performance
 
 # %%
+from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score, classification_report, ConfusionMatrixDisplay
+
+# %%
+y_preds = knn_final2.predict(X_test)
+confusion_matrix(y_test, y_preds)
+
+# %%
+knn_final2_score = knn_final2.score(X_test, y_test)
+accuracy = accuracy_score(y_test, y_preds)
+f1 = f1_score(y_test, y_preds, pos_label=None, average='weighted')
+precision = precision_score(y_test, y_preds, pos_label=None, average='weighted')
+recall = recall_score(y_test, y_preds, pos_label=None, average='weighted')
+
+# %%
+knn_final2_score, accuracy, f1, precision, recall
+
+# %%
+print(classification_report(y_test, y_preds))
+
+# %%
+ConfusionMatrixDisplay.from_predictions(y_test, y_preds, cmap='Greens', display_labels=['Non-Legendary', 'Legendary'], colorbar=False);
 
 # %%
 
