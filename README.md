@@ -29,13 +29,13 @@ To see the code I wrote to analyze the data and build kNN and logistic regressio
     - Histograms
 4) Create models of varying complexity and use hyperparameter tuning to determine optimal number of neighors (k).
 5) Train models using optimal k neighbors and check performance on testing data.
-6) Evaluate model performance on new data from Pokemon generation 8.
+6) Evaluate model performance on new data from Pokemon generation 7.
 
 
 # kNN Results:
 Using hyperparameter tuning with five-fold cross validation, a model with k=5 neighbors produced the highest testing score (~0.96) and achieved a weighted average of ~0.96 for precision, recall, and on the f1-score for testing data.  The model's only predictor variable was an aggregate called `Total Stats`, which was the sum of HP, Attack, Defense, Special Attack, Special Defense, and Speed.
 
-The model was trained and tested on data from Pokemon generation 1-7, but I was curious to see how it performed on data from a different generation.  Feeding the model generation 8 data resulted in a weighted average of precision of 0.85, recall 0.81, and f1-score 0.75.
+The model was trained and tested on data from Pokemon generation 1-6, but I was curious to see how it performed on data from a different generation.  Feeding the model generation 7 data resulted in a weighted average of precision of 0.85, recall 0.81, and f1-score 0.75.
 
 # Logistic Regression Results:
 Coming Soon.
