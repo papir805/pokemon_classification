@@ -1,5 +1,5 @@
 # Pokemon Legendary Classifier
-## Goal: Use Pokemon stats to predict whether a Pokemon is legendary in order to practice classification algorithms like K Nearest Neighbors (kNN) or logistic regression.
+## Goal: Use Pokemon stats to predict whether a Pokemon is legendary in order to practice classification algorithms like K Nearest Neighbors (kNN) or Logistic Regression.
 
 ### Pokemon stats (predictors):
 * HP
@@ -15,20 +15,20 @@
 Important Python libraries used: `SKlearn`, `Pandas`, `Matplotlib`, `seaborn`
 
 ## How to use this repository:
-To see the data that was used, click here: [pokemon_table](https://github.com/papir805/pokemon_classification/blob/main/pokemon_data/Pokemon_with_correct_pkmn_numbers.csv) or [combats_table](https://github.com/papir805/pokemon_classification/blob/main/pokemon_data/combats.csv)
+To see the data that was used: [pokemon_table](https://github.com/papir805/pokemon_classification/blob/main/pokemon_data/Pokemon_with_correct_pkmn_numbers.csv) or [combats_table](https://github.com/papir805/pokemon_classification/blob/main/pokemon_data/combats.csv)
 
-To see the code I wrote to analyze the data and build kNN and logistic regression models, [click here](https://github.com/papir805/pokemon_classification/blob/main/pkmn_legendary_classification_knn.ipynb)
+To see the code I wrote to analyze the data and build kNN and logistic regression models: [click here](https://github.com/papir805/pokemon_classification/blob/main/pkmn_legendary_classification_knn.ipynb)
 
 ## Method
 1) Left-Join Pokemon table and Combats table.
 2) Transform numerical predictors such that they're all on the same scale.  
-    - kNN classification compares Euclidean distance between points when creating the model.  Some of our numeric values are on a larger scale than others, which will have an impact on Euclidean distance, and may skew our understanding of the strength of a given predictor in the model. 
+    - kNN classification compares Euclidean distance between points when classifying an observation.  Some of our numeric values are on a larger scale than others, which will have an impact on Euclidean distance, and may skew our understanding of the strength of a given predictor in the model. 
 3) Check correlation between Legendary and all predictors.  Visualize the relationships using:
     - Heatmaps
     - Scatter Plots
     - Histograms
 4) Create models of varying complexity and use hyperparameter tuning to determine optimal number of neighors (k).
-5) Train models using optimal k neighbors on training data and check performance on testing data.
+5) Train models using optimal k neighbors and check performance on testing data.
 6) Evaluate model performance on new data from Pokemon generation 8.
 
 
