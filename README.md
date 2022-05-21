@@ -1,5 +1,5 @@
 # Pokemon Legendary Classifier
-## Goal: Use Pokemon stats to predict whether a Pokemon is legendary in order to practice classification algorithms like K Nearest Neighbors (kNN) or Logistic Regression.
+## Goal: Use Pokemon stats to predict whether a Pokemon is legendary, in order to practice classification algorithms like K Nearest Neighbors (kNN) or Logistic Regression.
 
 ### Pokemon stats (predictors):
 * HP
