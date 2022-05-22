@@ -29,15 +29,25 @@ from sklearn.metrics import confusion_matrix
 
 from sklearn.model_selection import GridSearchCV
 
-from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score, classification_report, plot_confusion_matrix
+from sklearn.metrics import (accuracy_score,
+                             f1_score,
+                             precision_score,
+                             recall_score,
+                             classification_report,
+                             #plot_confusion_matrix,
+                             ConfusionMatrixDisplay)
 
 sns.set_style('darkgrid')
 # %matplotlib inline
 
 # %%
 pkmn = pd.read_csv('./pokemon_data/Pokemon_with_correct_pkmn_numbers.csv')
-pkmn.rename(columns=({'#':'Number', 'Total':'Total Stats'}), inplace=True)
-# Usually rows in a Pandas dataframe (df) start at 0, but pokemon numbers start at 1.  The next line of code makes the df row index start at 1 and this will help us with joins later.  (joining pkmn and combats tables)
+pkmn.rename(columns=(
+                    {'#':'Number', 'Total':'Total Stats'}),
+            inplace=True)
+# Usually rows in a Pandas dataframe (df) start at 0, but pokemon numbers 
+# start at 1.  The next line of code makes the df row index start at 1 
+# and this will help us with joins later.  (joining pkmn and combats tables)
 pkmn.index = pkmn.index + 1
 
 combats = pd.read_csv("./pokemon_data/combats.csv")
@@ -53,7 +63,7 @@ pkmn.head()
 
 # %%
 print(F"The pkmn df has row index starting at {pkmn.index.min()} and ending at {pkmn.index.max()}")
-print(F"While the min pkmn.Number is {pkmn.Number.min()} and the max pkmn.Number is {pkmn.Number.max()}")
+print(F"While the min pkmn. Number is {pkmn.Number.min()} and the max pkmn.Number is {pkmn.Number.max()}")
 
 # %% [markdown]
 # Further proof that pokemon numbers are NOT unique, while row indexes are unique.
@@ -77,8 +87,14 @@ combats['Winner'].describe()
 # ## Identify names of pokemon in winning battles
 
 # %%
-# Join combats to pkmn table using the unique row indices (1, 800) for the pkmn table.  This ensures that a pokemon like Venusaur vs. Mega Venusaur will each have their own row and appropriate number of wins. 
-combats_join = pd.merge(combats, pkmn[['Name']], left_on='Winner', right_index=True, how='left')
+# Join combats to pkmn table using the unique row indices (1, 800) 
+# for the pkmn table.  This ensures that a pokemon like 
+# Venusaur vs. Mega Venusaur will each have their own row 
+# and appropriate number of wins. 
+combats_join = pd.merge(combats, 
+                        pkmn[['Name']], left_on='Winner', 
+                        right_index=True, 
+                        how='left')
 combats_join.rename(columns={'Name':"winner_name"}, inplace=True)
 combats_join.head()
 
@@ -90,9 +106,15 @@ combats_join.head()
 
 # %%
 winners = combats_join['Winner'].value_counts()
-pkmn_join = pd.merge(pkmn, winners, how='left', left_index=True, right_index=True)
-pkmn_join.rename(mapper={'Winner':'Wins'}, axis=1, inplace=True)
-# If a pokemon has NaN for Wins, we have no data on combats for the pokemon and can be considered as having 0 wins.
+pkmn_join = pd.merge(pkmn, winners, 
+                     how='left', 
+                     left_index=True, 
+                     right_index=True)
+pkmn_join.rename(mapper={'Winner':'Wins'}, 
+                 axis=1, 
+                 inplace=True)
+# If a pokemon has NaN for Wins, we have no data on combats 
+# for the pokemon and can be considered as having 0 wins.
 pkmn_join['Wins'].fillna(value=0, inplace=True)
 pkmn_join.sort_values('Wins', ascending=False)
 
@@ -112,7 +134,13 @@ print(num_combats == total_wins)
 # %%
 pkmn_join_copy = pkmn_join.copy(deep=True)
 
-numeric_cols_labels = ['Total Stats', 'HP', 'Attack', 'Defense', 'Sp. Atk', 'Sp. Def', 'Speed', 'Wins']
+numeric_cols_labels = ['Total Stats', 
+                       'HP', 'Attack', 
+                       'Defense', 
+                       'Sp. Atk', 
+                       'Sp. Def', 
+                       'Speed', 
+                       'Wins']
 
 numeric_cols = pkmn_join_copy.loc[:, numeric_cols_labels]
 
@@ -135,7 +163,12 @@ pkmn_join_copy.loc[:, numeric_cols_labels] = scaler.transform(numeric_cols)
 # %%
 categorical_cols = pkmn_join_copy.loc[:, ['Type 1', 'Type 2']]
 categorical_cols_labels = list(categorical_cols.columns)
-scaled_with_dummies = pd.get_dummies(pkmn_join_copy.drop(['Number', 'Name', 'Legendary'], axis=1), columns=categorical_cols_labels)
+scaled_with_dummies = pd.get_dummies(
+                                    pkmn_join_copy.drop(
+                                        ['Number', 'Name', 'Legendary'], 
+                                        axis=1), 
+                                    columns=categorical_cols_labels
+                                    )
 
 # %% [markdown]
 # Lastly, we separate our target labels from the rest of the dataset
@@ -160,7 +193,10 @@ pkmn_corr = pkmn_join_copy.corr()
 
 # %%
 fig, ax = plt.subplots(1,1, figsize=(9,7))
-sns.heatmap(pkmn_corr, cmap='gist_gray', square=True, ax=ax
+sns.heatmap(pkmn_corr, 
+            cmap='gist_gray', 
+            square=True, 
+            ax=ax
             #, annot=True, fmt='.2f', annot_kws={'size':12}
            )
 b, t = plt.ylim()
@@ -182,15 +218,26 @@ pkmn_corr['Legendary'].sort_values(ascending=False)
 most_corr_num_features = pkmn_corr['Legendary'].sort_values(ascending=False)[1:7].index.values
 
 # %% tags=[]
-sns.pairplot(pkmn_join_copy[['Total Stats', 'Sp. Atk', 'Sp. Def', 'Attack', 'Speed', 'Wins', 'Legendary']], hue='Legendary');
+sns.pairplot(pkmn_join_copy[
+                            ['Total Stats',
+                             'Sp. Atk', 
+                             'Sp. Def', 
+                             'Attack', 
+                             'Speed', 
+                             'Wins', 
+                             'Legendary']
+                            ], 
+                             hue='Legendary');
 
 # %% [markdown]
 # For most, if not all plots, we see a tendency for Legendary pokemon to cluster in the upper right of each scatter plot, indicating that Legendary pokemon tend to have high stats as compared to non-legendary pokemon.  These predictors are probably going to be the most important for our model's performance.
 
 # %%
 fig, ax = plt.subplots(1,1)
-pkmn_join_copy[pkmn_join_copy['Legendary']==True].hist(column='Total Stats', ax=ax)
-pkmn_join_copy[pkmn_join_copy['Legendary']==False].hist(column='Total Stats', ax=ax, alpha=0.5)
+pkmn_join_copy[pkmn_join_copy['Legendary']==True].hist(column='Total Stats', 
+                                                       ax=ax)
+pkmn_join_copy[pkmn_join_copy['Legendary']==False].hist(column='Total Stats', 
+                                                        ax=ax, alpha=0.5)
 plt.legend(['Legendary', 'Non-Legendary'])
 plt.show();
 
@@ -207,8 +254,12 @@ plt.show();
 # ### Creating a model using all features except total stats.
 
 # %%
-# Drop Total Stats column as we have more granularity if we look at each stat individually.  We can consider building a model that looks at total stats later on and compare performance to the model we build now.
-scaled_with_dummies_no_total = scaled_with_dummies.drop('Total Stats', axis=1)
+# Drop Total Stats column as we have more granularity 
+# if we look at each stat individually.  We can consider 
+# building a model that looks at total stats later on and 
+# compare performance to the model we build now.
+scaled_with_dummies_no_total = scaled_with_dummies.drop('Total Stats', 
+                                                        axis=1)
 
 # %%
 scaled_with_dummies_no_total.head()
@@ -221,8 +272,10 @@ knn_all_features_no_total = KNeighborsClassifier()
 
 param_grid = {'n_neighbors': np.arange(3,101,2)}
 
-knn_all_features_no_total_gscv = GridSearchCV(knn_all_features_no_total, param_grid, cv=5)
-knn_all_features_no_total_gscv.fit(scaled_with_dummies_no_total, target_df)
+knn_all_features_no_total_gscv = GridSearchCV(knn_all_features_no_total, 
+                                              param_grid, cv=5)
+knn_all_features_no_total_gscv.fit(scaled_with_dummies_no_total, 
+                                   target_df)
 
 print(F"Optimal n_neighbors for model: {knn_all_features_no_total_gscv.best_params_}")
 print(F"Highest model performance: {knn_all_features_no_total_gscv.best_score_}")
@@ -235,7 +288,8 @@ print(F"Highest model performance: {knn_all_features_no_total_gscv.best_score_}"
 
 # %%
 stats_labels = numeric_cols_labels[1:]
-scaled_with_dummies_total = scaled_with_dummies.drop(stats_labels, axis=1)
+scaled_with_dummies_total = scaled_with_dummies.drop(stats_labels, 
+                                                     axis=1)
 
 # %% [markdown]
 # #### Which n_neighbors is most optimal and what is the performance?
@@ -243,8 +297,10 @@ scaled_with_dummies_total = scaled_with_dummies.drop(stats_labels, axis=1)
 # %%
 knn_all_features_with_total = KNeighborsClassifier()
 
-knn_all_features_with_total_gscv = GridSearchCV(knn_all_features_with_total, param_grid, cv=5)
-knn_all_features_with_total_gscv.fit(scaled_with_dummies_total, target_df)
+knn_all_features_with_total_gscv = GridSearchCV(knn_all_features_with_total, 
+                                                param_grid, cv=5)
+knn_all_features_with_total_gscv.fit(scaled_with_dummies_total, 
+                                     target_df)
 
 print(F"Optimal n_neighbors for model: {knn_all_features_with_total_gscv.best_params_}")
 print(F"Highest model performance: {knn_all_features_with_total_gscv.best_score_}")
@@ -256,7 +312,13 @@ print(F"Highest model performance: {knn_all_features_with_total_gscv.best_score_
 # ### Creating a model using the predictors that were highly correlated with `Legendary`: `Total Stats`, `Sp. Atk`, `Sp. Def`, `Attack`, `Speed`, and `Wins`
 
 # %%
-individual_stats_and_wins = scaled_with_dummies[['Sp. Atk', 'Sp. Def', 'Attack', 'Speed', 'Wins']]
+individual_stats_and_wins = scaled_with_dummies[
+                                                ['Sp. Atk', 
+                                                 'Sp. Def', 
+                                                 'Attack', 
+                                                 'Speed', 
+                                                 'Wins']
+                                                ]
 
 # %% [markdown]
 # #### Which n_neighbors is most optimal and what is the performance?
@@ -264,8 +326,11 @@ individual_stats_and_wins = scaled_with_dummies[['Sp. Atk', 'Sp. Def', 'Attack',
 # %%
 knn_individual_stats_and_wins = KNeighborsClassifier()
 
-knn_individual_stats_and_wins_gscv = GridSearchCV(knn_individual_stats_and_wins, param_grid, cv=5)
-knn_individual_stats_and_wins_gscv.fit(individual_stats_and_wins, target_df)
+knn_individual_stats_and_wins_gscv = GridSearchCV(knn_individual_stats_and_wins, 
+                                                  param_grid, 
+                                                  cv=5)
+knn_individual_stats_and_wins_gscv.fit(individual_stats_and_wins, 
+                                       target_df)
 
 print(F"Optimal n_neighbors for model: {knn_individual_stats_and_wins_gscv.best_params_}")
 print(F"Highest model performance: {knn_individual_stats_and_wins_gscv.best_score_}")
@@ -277,7 +342,10 @@ print(F"Highest model performance: {knn_individual_stats_and_wins_gscv.best_scor
 # ### Creating a model using only `Total Stats` and `Wins`
 
 # %%
-total_stats_and_wins = scaled_with_dummies[['Total Stats', 'Wins']]
+total_stats_and_wins = scaled_with_dummies[
+                                            ['Total Stats', 
+                                             'Wins']
+                                            ]
 
 # %% [markdown]
 # #### Which n_neighbors is most optimal and what is the performance?
@@ -285,8 +353,11 @@ total_stats_and_wins = scaled_with_dummies[['Total Stats', 'Wins']]
 # %%
 knn_total_stats_and_wins = KNeighborsClassifier()
 
-knn_total_stats_and_wins_gscv = GridSearchCV(knn_total_stats_and_wins, param_grid, cv=5)
-knn_total_stats_and_wins_gscv.fit(total_stats_and_wins, target_df)
+knn_total_stats_and_wins_gscv = GridSearchCV(knn_total_stats_and_wins, 
+                                             param_grid, 
+                                             cv=5)
+knn_total_stats_and_wins_gscv.fit(total_stats_and_wins, 
+                                  target_df)
 
 print(F"Optimal n_neighbors for model: {knn_total_stats_and_wins_gscv.best_params_}")
 print(F"Highest model performance: {knn_total_stats_and_wins_gscv.best_score_}")
@@ -307,8 +378,11 @@ total_stats = np.array(total_stats).reshape(-1,1)
 # %%
 knn_total_stats = KNeighborsClassifier()
 
-knn_total_stats_gscv = GridSearchCV(knn_total_stats, param_grid, cv=5)
-knn_total_stats_gscv.fit(total_stats, target_df)
+knn_total_stats_gscv = GridSearchCV(knn_total_stats, 
+                                    param_grid, 
+                                    cv=5)
+knn_total_stats_gscv.fit(total_stats, 
+                         target_df)
 
 print(F"Optimal n_neighbors for model: {knn_total_stats_gscv.best_params_}")
 print(F"Highest model performance: {knn_total_stats_gscv.best_score_}")
@@ -323,7 +397,10 @@ print(F"Highest model performance: {knn_total_stats_gscv.best_score_}")
 # ### Model: Total stats and wins
 
 # %%
-X_train, X_test, y_train, y_test = train_test_split(total_stats_and_wins, target_df, test_size=0.2, random_state=5)
+X_train, X_test, y_train, y_test = train_test_split(total_stats_and_wins, 
+                                                    target_df, 
+                                                    test_size=0.2, 
+                                                    random_state=5)
 
 # %% [markdown]
 # #### Fit and train the model, then generate predictions
@@ -337,11 +414,21 @@ y_preds = knn_total_stats_and_wins.predict(X_test)
 # #### Check performance metrics
 
 # %%
-knn_total_stats_and_wins_score = knn_total_stats_and_wins.score(X_test, y_test)
+knn_total_stats_and_wins_score = knn_total_stats_and_wins.score(X_test, 
+                                                                y_test)
 accuracy = accuracy_score(y_test, y_preds)
-f1 = f1_score(y_test, y_preds, pos_label=None, average='weighted')
-precision = precision_score(y_test, y_preds, pos_label=None, average='weighted')
-recall = recall_score(y_test, y_preds, pos_label=None, average='weighted')
+f1 = f1_score(y_test, 
+              y_preds, 
+              pos_label=None, 
+              average='weighted')
+precision = precision_score(y_test, 
+                            y_preds, 
+                            pos_label=None, 
+                            average='weighted')
+recall = recall_score(y_test, 
+                      y_preds, 
+                      pos_label=None, 
+                      average='weighted')
 
 # %%
 knn_total_stats_and_wins_score, accuracy, f1, precision, recall
@@ -353,7 +440,20 @@ print(classification_report(y_test, y_preds))
 # #### Check confusion matrix
 
 # %%
-plot_confusion_matrix(knn_total_stats_and_wins, X_test, y_test, cmap='Greens', display_labels=['Non-Legendary', 'Legendary'], colorbar=False);
+# plot_confusion_matrix(knn_total_stats_and_wins, 
+#                       X_test, 
+#                       y_test, 
+#                       cmap='Greens', 
+#                       display_labels=['Non-Legendary', 'Legendary'], 
+#                       colorbar=False);
+
+# %%
+ConfusionMatrixDisplay.from_estimator(knn_total_stats_and_wins, 
+                                      X_test, 
+                                      y_test,
+                                      cmap="Greens",
+                                      display_labels=['Non-Legendary', 'Legendary'],
+                                      colorbar=False);
 
 # %% [markdown]
 # The model is very good at classifying non-legendary pokemon correctly, but is not as good at doing so for legendary pokemon.  Overall, precision, recall, and f1-score are all around 0.93-0.94.  Let's see how our other top model performs.
@@ -362,7 +462,10 @@ plot_confusion_matrix(knn_total_stats_and_wins, X_test, y_test, cmap='Greens', d
 # ### Model: Total stats
 
 # %%
-X_train, X_test, y_train, y_test = train_test_split(total_stats, target_df, test_size=0.2, random_state=6)
+X_train, X_test, y_train, y_test = train_test_split(total_stats, 
+                                                    target_df, 
+                                                    test_size=0.2, 
+                                                    random_state=6)
 
 # %% [markdown]
 # #### Fit and train the model, then generate predictions
@@ -376,11 +479,22 @@ y_preds = knn_total_stats.predict(X_test)
 # #### Check performance metrics
 
 # %%
-knn_total_stats_score = knn_total_stats.score(X_test, y_test)
-accuracy = accuracy_score(y_test, y_preds)
-f1 = f1_score(y_test, y_preds, pos_label=None, average='weighted')
-precision = precision_score(y_test, y_preds, pos_label=None, average='weighted')
-recall = recall_score(y_test, y_preds, pos_label=None, average='weighted')
+knn_total_stats_score = knn_total_stats.score(X_test, 
+                                              y_test)
+accuracy = accuracy_score(y_test, 
+                          y_preds)
+f1 = f1_score(y_test, 
+              y_preds, 
+              pos_label=None, 
+              average='weighted')
+precision = precision_score(y_test, 
+                            y_preds, 
+                            pos_label=None, 
+                            average='weighted')
+recall = recall_score(y_test, 
+                      y_preds, 
+                      pos_label=None, 
+                      average='weighted')
 
 # %%
 knn_total_stats_score, accuracy, f1, precision, recall
@@ -392,7 +506,15 @@ print(classification_report(y_test, y_preds))
 # #### Check confusion matrix
 
 # %%
-plot_confusion_matrix(knn_total_stats, X_test, y_test, cmap='Greens', display_labels=['Non-Legendary', 'Legendary'], colorbar=False);
+# plot_confusion_matrix(knn_total_stats, X_test, y_test, cmap='Greens', display_labels=['Non-Legendary', 'Legendary'], colorbar=False);
+
+# %%
+ConfusionMatrixDisplay.from_estimator(knn_total_stats, 
+                                      X_test, 
+                                      y_test,
+                                      cmap="Greens",
+                                      display_labels=['Non-Legendary', 'Legendary'],
+                                      colorbar=False);
 
 # %% [markdown]
 # This model performs better at classifying non-legendary pokemon, but the same for legendary pokemon.  We see a slight improvement in the weighted average for accuracy, f1, precision, and recall, about 0.02-0.03 higher than the previous model, but using only one predictor.  
@@ -404,13 +526,29 @@ plot_confusion_matrix(knn_total_stats, X_test, y_test, cmap='Greens', display_la
 complete = pd.read_csv("./pokemon_data/complete/pokemon_complete.csv")
 
 # %%
-gen_7 = complete.loc[complete['generation']==7, ['pokedex_number', 'name', 'attack', 'defense', 'hp', 'sp_attack', 'sp_defense', 'speed', 'generation', 'is_legendary']]
+gen_7 = complete.loc[complete['generation']==7, 
+                     ['pokedex_number', 
+                      'name', 
+                      'attack', 
+                      'defense', 
+                      'hp', 
+                      'sp_attack', 
+                      'sp_defense', 
+                      'speed', 
+                      'generation', 
+                      'is_legendary']
+                    ]
 
 # %%
 gen_7.columns
 
 # %%
-gen_7['total_stats'] = gen_7[['attack', 'defense', 'hp', 'sp_attack', 'sp_defense', 'speed']].sum(axis=1)
+gen_7['total_stats'] = gen_7[['attack', 
+                              'defense', 
+                              'hp', 
+                              'sp_attack', 
+                              'sp_defense', 
+                              'speed']].sum(axis=1)
 
 # %%
 gen_7['total_stats']
@@ -435,11 +573,22 @@ y_gen_7 = gen_7.loc[:, 'is_legendary']
 y_preds = knn_total_stats.predict(X_gen_7)
 
 # %%
-gen_7_total_stats_score = knn_total_stats.score(X_gen_7, y_gen_7)
-accuracy = accuracy_score(y_gen_7, y_preds)
-f1 = f1_score(y_gen_7, y_preds, pos_label=None, average='weighted')
-precision = precision_score(y_gen_7, y_preds, pos_label=None, average='weighted')
-recall = recall_score(y_gen_7, y_preds, pos_label=None, average='weighted')
+gen_7_total_stats_score = knn_total_stats.score(X_gen_7, 
+                                                y_gen_7)
+accuracy = accuracy_score(y_gen_7, 
+                          y_preds)
+f1 = f1_score(y_gen_7, 
+              y_preds, 
+              pos_label=None, 
+              average='weighted')
+precision = precision_score(y_gen_7, 
+                            y_preds, 
+                            pos_label=None, 
+                            average='weighted')
+recall = recall_score(y_gen_7, 
+                      y_preds, 
+                      pos_label=None, 
+                      average='weighted')
 
 # %%
 gen_7_total_stats_score, accuracy, f1, precision, recall
@@ -448,7 +597,15 @@ gen_7_total_stats_score, accuracy, f1, precision, recall
 print(classification_report(y_gen_7, y_preds))
 
 # %%
-plot_confusion_matrix(knn_total_stats, X_gen_7, y_gen_7, cmap='Greens', display_labels=['Non-Legendary', 'Legendary'], colorbar=False);
+# plot_confusion_matrix(knn_total_stats, X_gen_7, y_gen_7, cmap='Greens', display_labels=['Non-Legendary', 'Legendary'], colorbar=False);
+
+# %%
+ConfusionMatrixDisplay.from_estimator(knn_total_stats, 
+                                      X_gen_7, 
+                                      y_gen_7,
+                                      cmap="Greens",
+                                      display_labels=['Non-Legendary', 'Legendary'],
+                                      colorbar=False);
 
 # %% [markdown]
 # Just like earlier, the model predicted all non-legendary pokemon correctly, but for some reason is having more trouble predicting legendary pokemon now.  The weighted average of precision is 0.85, recall 0.81, and f1-score 0.75.
