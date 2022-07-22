@@ -48,6 +48,6 @@ When tested on generation 7 data, the model suffered a sizeable hit to accuracy,
 All that being said, kNN doesn't look like a great model to use for predicting whether a Pokémon is legendary or not and will search for other models that might work better instead.
 
 # Logistic Regression Results:
-Fitting a logistic regression model on generation 1-6 data, using `Total Stats` as the only predictor achieved a ten-fold cross validation roughly 93%.  This model was also heavily biased towards predicting non-legendary and when tested on generation 7 data, achieved 81% accuracy making the exact same predictions as were made by the kNN model.  
+Fitting a logistic regression model on generation 1-6 data, using `Total Stats` as the only predictor achieved a ten-fold cross validation of roughly 93%.  This model was also heavily biased towards predicting non-legendary and when tested on generation 7 data, achieved 81% accuracy making the *exact* same predictions as were made by the kNN model.  
 
-Unfortunately a logistic regression model doesn't seem to offer any advantage over the kNN model and I'm going to continue searching for a better model.
+Unfortunately a logistic regression model doesn't seem to offer any advantage over the kNN model and I'm going to continue searching for something better.
