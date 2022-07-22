@@ -22,6 +22,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 
+import statsmodels.api as sm
+
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split, cross_val_score
 from sklearn.neighbors import KNeighborsClassifier
@@ -129,67 +131,10 @@ print(num_combats == total_wins)
 # It looks like all the data was joined correctly
 
 # %% [markdown]
-# # kNN classification - Predicting legendary status from pokemon stats (HP, Defense, ..., num_wins_in_combat)
+# # Which numerical features are most highly correlated with a pokemon being legendary?
 
 # %%
-pkmn_join_copy = pkmn_join.copy(deep=True)
-
-numeric_cols_labels = ['Total Stats', 
-                       'HP', 'Attack', 
-                       'Defense', 
-                       'Sp. Atk', 
-                       'Sp. Def', 
-                       'Speed', 
-                       'Wins']
-
-numeric_cols = pkmn_join_copy.loc[:, numeric_cols_labels]
-
-# %% [markdown]
-# ## Scale and transform the data
-
-# %% [markdown]
-# kNN classification compares Euclidean distance between points when classifying a prediction.  Some of our numeric values are on a larger scale than others, which will have an impact on Euclidean distance, and may skew our understanding of the strength of a given predictor in the model.  To overcome this issue, we transform our numeric data so all predictors are on the same scale.
-
-# %%
-scaler = StandardScaler()
-scaler.fit(numeric_cols)
-pkmn_join_copy.loc[:, numeric_cols_labels] = scaler.transform(numeric_cols)
-
-# %% [markdown]
-# kNN classification requires quantitative values as input.  For categorical data, we can convert to dummy variables, which are quantitative, and allow for the use of categorical data in the model. 
-#
-# Note, I decide to exclude the "Generation" column.  I want the model to work without knowing which generation a pokemon comes from because I want the model to be generalizable to future generations of pokemon as well.  Lataer, I plan to test the model's performance on generation 8 pokemon.
-
-# %%
-categorical_cols = pkmn_join_copy.loc[:, ['Type 1', 'Type 2']]
-categorical_cols_labels = list(categorical_cols.columns)
-scaled_with_dummies = pd.get_dummies(
-                                    pkmn_join_copy.drop(
-                                        ['Number', 'Name', 'Legendary'], 
-                                        axis=1), 
-                                    columns=categorical_cols_labels
-                                    )
-
-# %% [markdown]
-# Lastly, we separate our target labels from the rest of the dataset
-
-# %%
-target_df = pkmn_join_copy['Legendary']
-
-# %% [markdown]
-# ### Checking the results
-
-# %%
-scaled_with_dummies.head()
-
-# %%
-scaled_with_dummies.columns
-
-# %% [markdown]
-# ## Which numerical features are most highly correlated with a pokemon being legendary?
-
-# %%
-pkmn_corr = pkmn_join_copy.corr()
+pkmn_corr = pkmn_join.corr()
 
 # %%
 fig, ax = plt.subplots(1,1, figsize=(9,7))
@@ -212,13 +157,13 @@ plt.show();
 pkmn_corr['Legendary'].sort_values(ascending=False)
 
 # %% [markdown]
-# ### Pairplots of variables most highly correlated with Legendary
+# ## Pairplots of variables most highly correlated with Legendary
 
 # %%
 most_corr_num_features = pkmn_corr['Legendary'].sort_values(ascending=False)[1:7].index.values
 
 # %% tags=[]
-sns.pairplot(pkmn_join_copy[
+sns.pairplot(pkmn_join[
                             ['Total Stats',
                              'Sp. Atk', 
                              'Sp. Def', 
@@ -234,15 +179,80 @@ sns.pairplot(pkmn_join_copy[
 
 # %%
 fig, ax = plt.subplots(1,1)
-pkmn_join_copy[pkmn_join_copy['Legendary']==True].hist(column='Total Stats', 
+pkmn_join[pkmn_join['Legendary']==True].hist(column='Total Stats', 
                                                        ax=ax)
-pkmn_join_copy[pkmn_join_copy['Legendary']==False].hist(column='Total Stats', 
+pkmn_join[pkmn_join['Legendary']==False].hist(column='Total Stats', 
                                                         ax=ax, alpha=0.5)
 plt.legend(['Legendary', 'Non-Legendary'])
 plt.show();
 
 # %% [markdown]
 # Focusing on the aggregated total stats, we see legendary pokemon are towards the top.  I expect this predcitor will be very useful in our model.
+
+# %% [markdown]
+# # kNN classification - Predicting legendary status from pokemon stats (HP, Defense, ..., num_wins_in_combat)
+
+# %%
+pkmn_join_copy = pkmn_join.copy(deep=True)
+
+numeric_cols_labels = ['Total Stats', 
+                       'HP', 'Attack', 
+                       'Defense', 
+                       'Sp. Atk', 
+                       'Sp. Def', 
+                       'Speed', 
+                       'Wins']
+
+numeric_cols = pkmn_join_copy.loc[:, numeric_cols_labels]
+
+# %% [markdown]
+# ## Scale and transform the data
+
+# %% [markdown]
+# kNN classification requires quantitative values as input.  For categorical data, we can convert to dummy variables, which are quantitative, and allow for the use of categorical data in the model. 
+#
+# Note, I decide to exclude the "Generation" column.  I want the model to work without knowing which generation a pokemon comes from because I want the model to be generalizable to future generations of pokemon as well.  Lataer, I plan to test the model's performance on generation 8 pokemon.
+
+# %%
+categorical_cols = pkmn_join_copy.loc[:, ['Type 1', 'Type 2']]
+categorical_cols_labels = list(categorical_cols.columns)
+orig_with_dummies = pd.get_dummies(
+                                    pkmn_join.drop(
+                                        ['Number', 'Name', 'Legendary'], 
+                                        axis=1), 
+                                    columns=categorical_cols_labels
+                                    )
+
+# %% [markdown]
+# kNN classification compares Euclidean distance between points when classifying a prediction.  Some of our numeric values are on a larger scale than others, which will have an impact on Euclidean distance, and may skew our understanding of the strength of a given predictor in the model.  To overcome this issue, we transform our numeric data so all predictors are on the same scale.
+
+# %%
+scaled_with_dummies = orig_with_dummies.copy()
+
+scaler = StandardScaler()
+scaler.fit(numeric_cols)
+scaled_with_dummies.loc[:, numeric_cols_labels] = scaler.transform(numeric_cols)
+
+# %%
+# scaled_with_dummies = orig_with_dummies.copy()
+
+# %% [markdown]
+# Lastly, we separate our target labels from the rest of the dataset
+
+# %%
+orig_with_dummies
+
+# %%
+target_df = pkmn_join_copy['Legendary']
+
+# %% [markdown]
+# ### Checking the results
+
+# %%
+scaled_with_dummies.head()
+
+# %%
+scaled_with_dummies.columns
 
 # %% [markdown]
 # ## Building Models
@@ -456,7 +466,19 @@ ConfusionMatrixDisplay.from_estimator(knn_total_stats_and_wins,
                                       colorbar=False);
 
 # %% [markdown]
-# The model is very good at classifying non-legendary pokemon correctly, but is not as good at doing so for legendary pokemon.  Overall, precision, recall, and f1-score are all around 0.93-0.94.  Let's see how our other top model performs.
+# The model is very good at classifying non-legendary pokemon correctly, but is not as good at doing so for legendary pokemon.  Overall, precision, recall, and f1-score are all around 0.93-0.94.  The model seems heavily biased towards predicting a Pokémon will be non-legendary, with 149 out of 160 predictions (93.125%) being non-legendary.
+#
+# I'm curious to see many Pokémon are legendary in the entire dataset for generation 1-7.  Let's investigate.
+
+# %%
+pkmn_join['Legendary'].value_counts(normalize=True)
+
+# %% [markdown]
+# Because there aren't that many legendary Pokémon in the game, an overwhelming majority are non-legendary (91.875%).  Knowing this, one could achieve roughly 92% accuracy on predictions by simply guessing non-legendary on any new Pokémon.
+#
+# The kNN model we constructed using `Total Stats` and `Wins` is only doing slightly better than that with roughly 94% accuracy.
+#
+# Let's see how our other top kNN model performs.
 
 # %% [markdown]
 # ### Model: Total stats
@@ -479,8 +501,8 @@ y_preds = knn_total_stats.predict(X_test)
 # #### Check performance metrics
 
 # %%
-knn_total_stats_score = knn_total_stats.score(X_test, 
-                                              y_test)
+# knn_total_stats_score = knn_total_stats.score(X_test, 
+#                                               y_test)
 accuracy = accuracy_score(y_test, 
                           y_preds)
 f1 = f1_score(y_test, 
@@ -497,7 +519,7 @@ recall = recall_score(y_test,
                       average='weighted')
 
 # %%
-knn_total_stats_score, accuracy, f1, precision, recall
+accuracy, f1, precision, recall
 
 # %%
 print(classification_report(y_test, y_preds))
@@ -517,7 +539,9 @@ ConfusionMatrixDisplay.from_estimator(knn_total_stats,
                                       colorbar=False);
 
 # %% [markdown]
-# This model performs better at classifying non-legendary pokemon, but the same for legendary pokemon.  We see a slight improvement in the weighted average for accuracy, f1, precision, and recall, about 0.02-0.03 higher than the previous model, but using only one predictor.  
+# This model performs about the same as the previous one but is even more biased to predicting a new Pokémon as non-legendary, with 153 out of 160 predicted as being non-legendary (95.625%).
+#
+# Let's see how well both of these models predict on real testing data from a newer Pokémon generation.
 
 # %% [markdown]
 # ## How does it perform on pokemon data from generation 7?
@@ -540,9 +564,6 @@ gen_7 = complete.loc[complete['generation']==7,
                     ]
 
 # %%
-gen_7.columns
-
-# %%
 gen_7['total_stats'] = gen_7[['attack', 
                               'defense', 
                               'hp', 
@@ -551,10 +572,12 @@ gen_7['total_stats'] = gen_7[['attack',
                               'speed']].sum(axis=1)
 
 # %%
-gen_7['total_stats']
+gen_7['is_legendary'].value_counts(normalize=True)
 
-# %%
-gen_7['is_legendary'].value_counts()
+# %% [markdown]
+# Generation 7 is interesting because there's a much lower proportion of non-legendary pokemon in this generation (78.75%) as compared to only about 93% from generation 1-6 combined.  
+#
+# Given that the kNN models that were constructed earlier are biased towards predicting non-legendary, I imagine we'll see a pretty significant hit on accuracy and other metrics on the new generation 7 data.
 
 # %%
 gen_7_total_stats = gen_7.loc[:, 'total_stats']
@@ -573,8 +596,8 @@ y_gen_7 = gen_7.loc[:, 'is_legendary']
 y_preds = knn_total_stats.predict(X_gen_7)
 
 # %%
-gen_7_total_stats_score = knn_total_stats.score(X_gen_7, 
-                                                y_gen_7)
+# gen_7_total_stats_score = knn_total_stats.score(X_gen_7, 
+#                                                 y_gen_7)
 accuracy = accuracy_score(y_gen_7, 
                           y_preds)
 f1 = f1_score(y_gen_7, 
@@ -591,10 +614,13 @@ recall = recall_score(y_gen_7,
                       average='weighted')
 
 # %%
-gen_7_total_stats_score, accuracy, f1, precision, recall
+accuracy, f1, precision, recall
 
 # %%
 print(classification_report(y_gen_7, y_preds))
+
+# %% [markdown]
+# All of our metrics have decreased, with 81.25% accuracy.  Given that our data set had about 78% non-legendary Pokémon in it, this makes sense for a model that has a strong tendency to predict non-legendary.
 
 # %%
 # plot_confusion_matrix(knn_total_stats, X_gen_7, y_gen_7, cmap='Greens', display_labels=['Non-Legendary', 'Legendary'], colorbar=False);
@@ -608,7 +634,31 @@ ConfusionMatrixDisplay.from_estimator(knn_total_stats,
                                       colorbar=False);
 
 # %% [markdown]
-# Just like earlier, the model predicted all non-legendary pokemon correctly, but for some reason is having more trouble predicting legendary pokemon now.  The weighted average of precision is 0.85, recall 0.81, and f1-score 0.75.
+# Looking at the confusion matrix, we see that the model has predicted all but 2 Pokémon as being non-legendary.  Since a larger than usual proportion of Pokémon are legendary in generation 7, the kNN model that predominantly predict non-legendary is seeing a heavy hit on its accuracy and is probably not a very useful model to use.  
+#
+# Moving on.
+
+# %% [markdown]
+# # Logistic Regression
+
+# %%
+orig_with_dummies = pd.get_dummies(
+                                    pkmn_join.drop(
+                                        ['Number', 'Name', 'Legendary'], 
+                                        axis=1), 
+                                    columns=categorical_cols_labels
+                                    )
+
+# %%
+X = 
+
+# %%
+
+# %%
+
+# %%
+
+# %%
 
 # %% [markdown]
 # # The end
