@@ -1,7 +1,7 @@
-# Pokemon Legendary Classifier
-## Goal: Use Pokemon stats to predict whether a Pokemon is legendary, in order to practice classification algorithms like K Nearest Neighbors (kNN) or Logistic Regression.
+# Pokémon Legendary Classifier
+## Goal: Use Pokémon stats to predict whether a Pokémon is legendary, in order to practice classification algorithms like K Nearest Neighbors (kNN) or Logistic Regression.
 
-### Pokemon stats (predictors):
+### Pokémon stats (predictors):
 * HP
 * Attack
 * Defense
@@ -20,16 +20,20 @@ To see the data that was used: [pokemon_table](https://github.com/papir805/pokem
 To see the code I wrote to analyze the data and build kNN and logistic regression models: [click here](https://github.com/papir805/pokemon_classification/blob/main/pkmn_legendary_classification_knn.ipynb)
 
 ## Method
-1) Left-Join Pokemon table and Combats table.
-2) Transform numerical predictors such that they're all on the same scale.  
-    - kNN classification compares Euclidean distance between points when classifying an observation.  Some of our numeric values are on a larger scale than others, which will have an impact on Euclidean distance, and may skew our understanding of the strength of a given predictor in the model. 
-3) Check correlation between Legendary and all predictors.  Visualize the relationships using:
+1) Left-Join Pokémon table and Combats table.
+2) Check correlation between Legendary and all predictors.  Visualize the relationships using:
     - Heatmaps
     - Scatter Plots
     - Histograms
-4) Create models of varying complexity and use hyperparameter tuning to determine optimal number of neighors (k).
-5) Train models using optimal k neighbors and check performance on testing data.
-6) Evaluate model performance on new data from Pokemon generation 7.
+3) kNN
+    - Transform numerical predictors such that they're all on the same scale.  
+        - kNN classification compares Euclidean distance between points when classifying an observation.  Some of our numeric values are on a larger scale than others, which will have an impact on Euclidean distance, and may skew our understanding of the strength of a given predictor in the model.
+    - Create models of varying complexity and use hyperparameter tuning to determine optimal number of neighors (k).
+    - Train models using optimal k neighbors on generation 1-6 data and estimate testing performance using k-Fold Repeated Cross Validation.
+    - Evaluate model performance on new data from Pokémon generation 7.
+4) Logistic Regression
+    - Train model on generation 1-6 data and estimate testing performance using k-Fold Repeated Cross Validation.
+    - Evaluate model performance on new data from Pokémon generation 7.
 
 
 # kNN Results:
