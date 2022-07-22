@@ -37,7 +37,7 @@ To see the code I wrote to analyze the data and build kNN and logistic regressio
 
 
 # kNN Results:
-Using hyperparameter tuning with five-fold cross validation, a model with k=5 neighbors produced the highest testing score (~0.96) and achieved a weighted average of ~0.96 for precision, recall, and on the f1-score for testing data.  The model's only predictor variable was an aggregate called `Total Stats`, which was the sum of HP, Attack, Defense, Special Attack, Special Defense, and Speed.
+Using hyperparameter tuning with five-fold cross validation, a model with k=5 neighbors produced the highest testing score (~0.96) and achieved a weighted average of ~0.96 for precision, recall, and on the f1-score for testing data.  The model's only predictor variable was an aggregate called `Total Stats`, which was the sum of `HP`, `Attack`, `Defense`, `Special Attack`, `Special Defense`, and `Speed`.
 
 Despite having high predictive accuracy, given that such a small percentage of our population was actually legendary (roughly 8%), the model was heavily biased towards predicting a Pokémon as being non-legendary.  If one employed a strategy of only predicting non-legendary, one would achieve roughly 92% accuracy, so the kNN model is only performing slightly better that that. 
 
