@@ -25,12 +25,10 @@ import seaborn as sns
 import statsmodels.api as sm
 
 from sklearn.preprocessing import StandardScaler
-from sklearn.model_selection import train_test_split, cross_val_score
+from sklearn.model_selection import train_test_split, cross_val_score, GridSearchCV, RepeatedKFold
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.metrics import confusion_matrix
-
-from sklearn.model_selection import GridSearchCV
-
+from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import (accuracy_score,
                              f1_score,
                              precision_score,
@@ -238,9 +236,6 @@ scaled_with_dummies.loc[:, numeric_cols_labels] = scaler.transform(numeric_cols)
 
 # %% [markdown]
 # Lastly, we separate our target labels from the rest of the dataset
-
-# %%
-orig_with_dummies
 
 # %%
 target_df = pkmn_join_copy['Legendary']
@@ -586,7 +581,7 @@ gen_7_total_stats = np.array(gen_7_total_stats).reshape(-1, 1)
 scaler = StandardScaler()
 scaler.fit(gen_7_total_stats)
 gen_7_total_scaled = scaler.transform(gen_7_total_stats)
-gen_7.loc[:, 'total_stats'] = gen_7_total_scaled
+#gen_7.loc[:, 'total_stats'] = gen_7_total_scaled
 X_gen_7 = gen_7_total_scaled
 
 # %%
@@ -640,25 +635,85 @@ ConfusionMatrixDisplay.from_estimator(knn_total_stats,
 
 # %% [markdown]
 # # Logistic Regression
+# Because we already have a reasonable idea of which features are most correlated with a Pokémon being legendary, I'll create a logistic regression model that uses `Total Stats` and check its performance on new generation 7 Pokémon data, then compare against the kNN model from earlier.
+
+# %% [markdown]
+# ## `Total Stats`
 
 # %%
-orig_with_dummies = pd.get_dummies(
-                                    pkmn_join.drop(
-                                        ['Number', 'Name', 'Legendary'], 
-                                        axis=1), 
-                                    columns=categorical_cols_labels
-                                    )
+X = pkmn_join[['Total Stats']]
+y = target_df
+
+sm_log_reg_model = sm.Logit(y, X)
+sm_log_reg_fit = sm_log_reg_model.fit()
 
 # %%
-X = 
+sm_log_reg_fit.summary()
+
+# %% [markdown]
+# The summary output for the logistic regression model shows that `Total Stats` is a statistically significant predictor with a P-value of $\approx 0$
+#
+# The coefficient of -0.0045 means that for a one unit increase in `Total Stats` we expect to see a decrease of 0.0045 in the log odds for predicting a Pokémon as non-legendary.  In other words, Pokémon with higher total stats are less likely to be non-legendary.
 
 # %%
+test_df = pd.concat([pkmn_join[['Total Stats', 'Legendary']], pd.Series(y_prob, index=np.arange(1,801), name='Predicted Probability')], axis=1)
+#test_df
 
 # %%
+sns.scatterplot(x = 'Total Stats', y = 'Predicted Probability', data=test_df, hue='Legendary');
+
+# %% [markdown]
+# The graph above provides a nice visual representation of what the -0.0045 coefficient from the summary above represents.  We can see that as `Total Stats` increases, the predicted probabilities of a Pokémon being non-legendary decrease.  This makes sense as most of the Pokémon with the highest `Total Stats` are legendary.
 
 # %%
+cv = RepeatedKFold(n_splits=10, n_repeats=3, random_state=1)
+
+sk_log_reg_model = LogisticRegression()
+
+sk_log_reg_scores = cross_val_score(sk_log_reg_model, X, y, scoring='accuracy', cv=cv, n_jobs=-1)
 
 # %%
+print("k-Fold Repeated Cross Validation")
+print("--------------------------------")
+print(F"Average Testing Accuracy: {sk_log_reg_scores.mean():.3f}")
+print(F"Average Testing Error: {1 - sk_log_reg_scores.mean():.3f}")
+print(F"Std Dev: {sk_log_reg_scores.std():.3f}")
+
+# %% [markdown]
+# After performing k-fold repeated cross validation, we can get an estimate of what our testing error will be for the logistic regression model.  On average, we expect roughly 93% accuracy, with a standard deviation of 2.5%.
+
+# %% [markdown]
+# ## Gen 7 Testing
+
+# %%
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.1, random_state=0)
+
+sk_log_reg_fit = sk_log_reg_model.fit(X_train, y_train)
+
+# %%
+sk_log_reg_gen_7_preds = sk_log_reg_fit.predict(np.array(gen_7['total_stats']).reshape(-1,1))
+
+# lr_preds
+# preds = log_reg_fit_auto.predict(X_test_imp_features)
+# pred_mpg01 = np.where(preds <= 0.5, 0, 1)
+
+accuracy = accuracy_score(y_gen_7, sk_log_reg_gen_7_preds)
+test_error = 1 - accuracy
+print(F"Gen 7 Accuracy: {accuracy:.3f}")
+print(F"Gen 7 error: {test_error:.3f}")
+
+# %%
+ConfusionMatrixDisplay.from_estimator(sk_log_reg_fit, 
+                                      np.array(gen_7['total_stats']).reshape(-1,1), 
+                                      y_gen_7,
+                                      cmap="Greens",
+                                      display_labels=['Non-Legendary', 'Legendary'],
+                                      colorbar=False);
+
+# %% [markdown]
+# Using logistic regression on the generation 7 data produces the exact same predictions as our kNN model and we see the same accuracy (82%).  The logistic regression model is also heavily biased towards predicting a Pokémon is non-legendary.
+#
+# kNN and now Logistic regression both don't look like a great models to use.  Perhaps a different type of model would perform better, but for now it we're left in the dark. 
 
 # %% [markdown]
 # # The end
