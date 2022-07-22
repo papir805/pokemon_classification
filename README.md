@@ -45,7 +45,7 @@ The model was trained and tested on data from Pokemon generation 1-6, but I was 
 
 When tested on generation 7 data, the model suffered a sizeable hit to accuracy, losing nearly 10%.  This is largely due to the fact that the kNN model is heavily biased towards predicting non-legendary, however in generation 7 there is a lower proportion of non-legendary Pokémon (81%) as compared to generation 1-6 (92%).  The proportion is roughly 10% lower, hence the 10% hit on accuracy.
 
-All that being said, kNN doesn't look like a great model to use for predicting whether a Pokémon is legendary or not and began considering other models that might work better instead.
+All that being said, kNN doesn't look like a great model to use for predicting whether a Pokémon is legendary or not and will search for other models that might work better instead.
 
 # Logistic Regression Results:
 Fitting a logistic regression model on generation 1-6 data, using `Total Stats` as the only predictor achieved a ten-fold cross validation roughly 93%.  This model was also heavily biased towards predicting non-legendary and when tested on generation 7 data, achieved 81% accuracy making the exact same predictions as were made by the kNN model.  
