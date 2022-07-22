@@ -35,7 +35,15 @@ To see the code I wrote to analyze the data and build kNN and logistic regressio
 # kNN Results:
 Using hyperparameter tuning with five-fold cross validation, a model with k=5 neighbors produced the highest testing score (~0.96) and achieved a weighted average of ~0.96 for precision, recall, and on the f1-score for testing data.  The model's only predictor variable was an aggregate called `Total Stats`, which was the sum of HP, Attack, Defense, Special Attack, Special Defense, and Speed.
 
+Despite having high predictive accuracy, given that such a small percentage of our population was actually legendary (roughly 8%), the model was heavily biased towards predicting a Pokémon as being non-legendary.  If one employed a strategy of only predicting non-legendary, one would achieve roughly 92% accuracy, so the kNN model is only performing slightly better that that. 
+
 The model was trained and tested on data from Pokemon generation 1-6, but I was curious to see how it performed on data from a different generation.  Feeding the model generation 7 data resulted in a weighted average of precision of 0.85, recall 0.81, and f1-score 0.75.
 
+When tested on generation 7 data, the model suffered a sizeable hit to accuracy, losing nearly 10%.  This is largely due to the fact that the kNN model is heavily biased towards predicting non-legendary, however in generation 7 there is a lower proportion of non-legendary Pokémon (81%) as compared to generation 1-6 (92%).  The proportion is roughly 10% lower, hence the 10% hit on accuracy.
+
+All that being said, kNN doesn't look like a great model to use for predicting whether a Pokémon is legendary or not and began considering other models that might work better instead.
+
 # Logistic Regression Results:
-Coming Soon.
+Fitting a logistic regression model on generation 1-6 data, using `Total Stats` as the only predictor achieved a ten-fold cross validation roughly 93%.  This model was also heavily biased towards predicting non-legendary and when tested on generation 7 data, achieved 81% accuracy making the exact same predictions as were made by the kNN model.  
+
+Unfortunately a logistic regression model doesn't seem to offer any advantage over the kNN model and I'm going to continue searching for a better model.
