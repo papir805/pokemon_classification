@@ -51,3 +51,6 @@ All that being said, kNN doesn't look like a great model to use for predicting w
 Fitting a logistic regression model on generation 1-6 data, using `Total Stats` as the only predictor achieved a ten-fold cross validation of roughly 93%.  This model was also heavily biased towards predicting non-legendary and when tested on generation 7 data, achieved 81% accuracy making the **exact same predictions** as were made by the kNN model.  
 
 Unfortunately a logistic regression model doesn't seem to offer any advantage over the kNN model and I'm going to continue searching for something better.
+
+# Coming Soon
+Linear Discriminant Analysis, Quadratic Discriminant Analysis, and revisiting kNN and logistic regression by altering the bayes decision boundary.
