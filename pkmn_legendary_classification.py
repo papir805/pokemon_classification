@@ -516,7 +516,9 @@ ConfusionMatrixDisplay.from_estimator(knn_total_stats_and_wins,
                                       y_test,
                                       cmap="Greens",
                                       display_labels=['Non-Legendary', 'Legendary'],
-                                      colorbar=False);
+                                      colorbar=False)
+plt.grid(False)
+plt.title('kNN Model using Total Stats and Wins to predict legendary status on generation 1-6 Pokemon');
 
 # %% [markdown]
 # The model is very good at classifying non-legendary pokemon correctly, but is not as good at doing so for legendary pokemon.  Overall, precision, recall, and f1-score are all around 0.93-0.94.  The model seems heavily biased towards predicting a Pokémon will be non-legendary, with 149 out of 160 predictions (93.125%) being non-legendary.
@@ -589,7 +591,10 @@ ConfusionMatrixDisplay.from_estimator(knn_total_stats,
                                       y_test,
                                       cmap="Greens",
                                       display_labels=['Non-Legendary', 'Legendary'],
-                                      colorbar=False);
+                                      colorbar=False)
+plt.grid(False)
+plt.title('kNN Model using Total Stats to predict legendary status on generation 1-6 Pokemon')
+plt.savefig("/users/rancher/Google Drive/Coding/website/github_pages/images/knn_gen_16.png");
 
 # %% [markdown]
 # This model performs about the same as the previous one but is even more biased to predicting a new Pokémon as non-legendary, with 153 out of 160 predicted as being non-legendary (95.625%).
