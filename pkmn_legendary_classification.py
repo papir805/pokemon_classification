@@ -131,6 +131,74 @@ print(num_combats == total_wins)
 # %% [markdown]
 # # Which numerical features are most highly correlated with a pokemon being legendary?
 
+# %% [markdown]
+# ## Pairplots of variables
+
+# %%
+most_corr_num_features = pkmn_corr['Legendary'].sort_values(ascending=False)[1:7].index.values
+
+# %% tags=[]
+# sns.pairplot(pkmn_join[
+#                             ['Total Stats',
+#                              'Sp. Atk', 
+#                              'Sp. Def', 
+#                              'Attack', 
+#                              'Speed', 
+#                              'Wins', 
+#                              'Legendary']
+#                             ], 
+#                              hue='Legendary');
+
+# %%
+new_df = pkmn_join[['Number',
+                    'HP',
+                    'Attack',
+                    'Defense',
+                    'Sp. Atk',
+                    'Sp. Def',
+                    'Speed',
+                    'Wins',
+                    'Legendary']]
+
+sns.pairplot(data=new_df, 
+             hue='Legendary',
+             y_vars='Number')
+plt.savefig("/users/rancher/Google Drive/Coding/website/github_pages/images/pairplots.png");
+
+# %% [markdown]
+# For all plots, we see a tendency for legendary Pokémon to cluster in the right side of each scatter plot, indicating that legendary Pokémon tend to have high stats as compared to non-legendary pokemon.  These predictors are probably going to be the most important for our model's performance.
+
+# %%
+new_df = pkmn_join[['Number',
+                    'Total Stats',
+                    'Legendary']]
+
+sns.scatterplot(data=new_df, 
+             hue='Legendary',
+             y='Number',
+             x='Total Stats')
+plt.savefig("/users/rancher/Google Drive/Coding/website/github_pages/images/pairplot_total_stats.png");
+
+# %% [markdown]
+# Because this tendency was true for all individual stats, I was curious to see what would happen if a new feature called `Total Stats` was created, which is the sum of `HP`, `Attack`, `Defense`, `Sp. Atk`, `Sp. Def`, and `Speed`.
+#
+# When plotting the new feature Total Stats, it's much easier to see that legendary Pokémon tend to have higher `Total Stats` than non-legendary Pokémon.  While we don't see perfect separation between the groups, the decision boundary is much more clear than any of the scatter plots that focused on just a single Pokémon stat.
+
+# %%
+fig, ax = plt.subplots(1,1)
+pkmn_join[pkmn_join['Legendary']==True].hist(column='Total Stats', 
+                                                       ax=ax)
+pkmn_join[pkmn_join['Legendary']==False].hist(column='Total Stats', 
+                                                        ax=ax, alpha=0.5)
+plt.legend(['Legendary', 'Non-Legendary'])
+plt.show();
+
+# %% [markdown]
+# Focusing on the aggregated total stats, we see legendary pokemon are towards the top.  I expect this predictor will be very useful in our model.
+
+# %% [markdown]
+# ## Heatmaps of Correlation against Legendary
+
 # %%
 pkmn_corr = pkmn_join.corr()
 
@@ -166,71 +234,13 @@ plt.yticks(rotation=0)
 plt.savefig('heatmap.png')
 plt.show();
 
-# %% [markdown]
-# Legendary seems most highly correlated with Total Stats, Sp. Atk, Sp. Def, Attack, Speed, and Wins
-
 # %%
 pkmn_corr['Legendary'].sort_values(ascending=False)
 
 # %% [markdown]
-# ## Pairplots of variables most highly correlated with Legendary
-
-# %%
-most_corr_num_features = pkmn_corr['Legendary'].sort_values(ascending=False)[1:7].index.values
-
-# %% tags=[]
-# sns.pairplot(pkmn_join[
-#                             ['Total Stats',
-#                              'Sp. Atk', 
-#                              'Sp. Def', 
-#                              'Attack', 
-#                              'Speed', 
-#                              'Wins', 
-#                              'Legendary']
-#                             ], 
-#                              hue='Legendary');
-
-# %%
-new_df = pkmn_join[['Number',
-                    'HP',
-                    'Attack',
-                    'Defense',
-                    'Sp. Atk',
-                    'Sp. Def',
-                    'Speed',
-                    'Wins',
-                    'Legendary']]
-
-sns.pairplot(data=new_df, 
-             hue='Legendary',
-             y_vars='Number')
-plt.savefig("/users/rancher/Google Drive/Coding/website/github_pages/images/pairplots.png");
-
-# %%
-new_df = pkmn_join[['Number',
-                    'Total Stats',
-                    'Legendary']]
-
-sns.scatterplot(data=new_df, 
-             hue='Legendary',
-             y='Number',
-             x='Total Stats')
-plt.savefig("/users/rancher/Google Drive/Coding/website/github_pages/images/pairplot_total_stats.png");
-
-# %% [markdown]
-# For most, if not all plots, we see a tendency for Legendary pokemon to cluster in the upper right of each scatter plot, indicating that Legendary pokemon tend to have high stats as compared to non-legendary pokemon.  These predictors are probably going to be the most important for our model's performance.
-
-# %%
-fig, ax = plt.subplots(1,1)
-pkmn_join[pkmn_join['Legendary']==True].hist(column='Total Stats', 
-                                                       ax=ax)
-pkmn_join[pkmn_join['Legendary']==False].hist(column='Total Stats', 
-                                                        ax=ax, alpha=0.5)
-plt.legend(['Legendary', 'Non-Legendary'])
-plt.show();
-
-# %% [markdown]
-# Focusing on the aggregated total stats, we see legendary pokemon are towards the top.  I expect this predictor will be very useful in our model.
+# Legendary seems most highly correlated with the individual stats `Sp. Atk`, `Sp. Def`, `Attack`, and `Speed`, however we see the highest correlation with `Total Stats`.  
+#
+# There is also 
 
 # %% [markdown]
 # # kNN classification - Predicting legendary status from pokemon stats (HP, Defense, ..., num_wins_in_combat)
