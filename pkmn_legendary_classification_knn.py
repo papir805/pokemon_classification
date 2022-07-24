@@ -707,9 +707,9 @@ sk_log_reg_fit = sk_log_reg_model.fit(X, y)
 y_prob_non_legendary = sk_log_reg_fit.predict_proba(X)
 
 log_reg_proba_df = pd.concat([pkmn_join[['Total Stats', 'Legendary']],
-                              pd.Series(y_prob_non_legendary[:,0
-                                ], index=np.arange(1,801),
-                     name='Predicted Probability')], axis=1)
+                             pd.Series(y_prob_non_legendary[:, 0],
+                             index=np.arange(1, 801),
+                             name='Predicted Probability')], axis=1)
 
 # %%
 sns.scatterplot(x='Total Stats',
