@@ -169,7 +169,7 @@ new_df = pkmn_join[['Number',
 sns.pairplot(data=new_df, 
              hue='Legendary',
              y_vars='Number')
-plt.savefig("/users/rancher/Google Drive/Coding/website/github_pages/images/pairplots.png");
+plt.savefig("/users/rancher/Google Drive/Coding/website/github_pages/images/pokemon_classifier/pairplots.png");
 
 # %% [markdown]
 # For all plots, we see a tendency for legendary Pokémon to cluster in the right side of each scatter plot, indicating that legendary Pokémon tend to have high stats as compared to non-legendary pokemon.  These predictors are probably going to be the most important for our model's performance.
@@ -183,7 +183,7 @@ sns.scatterplot(data=new_df,
              hue='Legendary',
              y='Number',
              x='Total Stats')
-plt.savefig("/users/rancher/Google Drive/Coding/website/github_pages/images/pairplot_total_stats.png");
+plt.savefig("/users/rancher/Google Drive/Coding/website/github_pages/images/pokemon_classifier/pairplot_total_stats.png");
 
 # %% [markdown]
 # Because this tendency was true for all individual stats, I was curious to see what would happen if a new feature called `Total Stats` was created, which is the sum of `HP`, `Attack`, `Defense`, `Sp. Atk`, `Sp. Def`, and `Speed`.
@@ -234,7 +234,7 @@ t -= 0.5
 plt.ylim(b, t)
 plt.xticks(rotation=45)
 plt.yticks(rotation=0)
-plt.savefig('/users/rancher/Google Drive/Coding/website/github_pages/images/heatmap.png')
+plt.savefig('/users/rancher/Google Drive/Coding/website/github_pages/images/pokemon_classifier/heatmap.png')
 plt.show();
 
 # %%
@@ -594,7 +594,7 @@ ConfusionMatrixDisplay.from_estimator(knn_total_stats,
                                       colorbar=False)
 plt.grid(False)
 plt.title('kNN Model using Total Stats to predict legendary status on generation 1-6 Pokemon')
-plt.savefig("/users/rancher/Google Drive/Coding/website/github_pages/images/knn_gen_16.png");
+plt.savefig("/users/rancher/Google Drive/Coding/website/github_pages/images/pokemon_classifier/knn_gen_16.png", bbox_inches="tight");
 
 # %% [markdown]
 # This model performs about the same as the previous one but is even more biased to predicting a new Pokémon as non-legendary, with 153 out of 160 predicted as being non-legendary (95.625%).
@@ -692,7 +692,7 @@ ConfusionMatrixDisplay.from_estimator(knn_total_stats,
                                       colorbar=False)
 plt.grid(False)
 plt.title('kNN Model using Total Stats to predict legendary status on generation 7 Pokemon')
-plt.savefig("/users/rancher/Google Drive/Coding/website/github_pages/images/knn_gen_7.png");
+plt.savefig("/users/rancher/Google Drive/Coding/website/github_pages/images/pokemon_classifier/knn_gen_7.png", bbox_inches="tight");
 
 # %% [markdown]
 # Looking at the confusion matrix, we see that the model has predicted all but 2 Pokémon as being non-legendary.  Since a larger than usual proportion of Pokémon are legendary in generation 7, the kNN model that predominantly predict non-legendary is seeing a heavy hit on its accuracy and is probably not a very useful model to use.  
@@ -787,7 +787,7 @@ ConfusionMatrixDisplay.from_estimator(sk_log_reg_fit,
                                       colorbar=False)
 plt.grid(False)
 plt.title('Logisting Regression Model using Total Stats to predict legendary status on generation 7 Pokemon')
-plt.savefig("/users/rancher/Google Drive/Coding/website/github_pages/images/log_reg_gen_7.png");
+plt.savefig("/users/rancher/Google Drive/Coding/website/github_pages/images/pokemon_classifier/log_reg_gen_7.png", bbox_inches="tight");
 
 # %% [markdown]
 # Using logistic regression on the generation 7 data produces the exact same predictions as our kNN model and we see the same accuracy (82%).  The logistic regression model is also heavily biased towards predicting a Pokémon is non-legendary.
