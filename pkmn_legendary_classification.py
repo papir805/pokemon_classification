@@ -128,11 +128,17 @@ print(num_combats == total_wins)
 # %% [markdown]
 # It looks like all the data was joined correctly
 
+# %%
+pkmn_join.to_csv("./pokemon_data/pkmn_join.csv")
+
 # %% [markdown]
 # # Which numerical features are most highly correlated with a pokemon being legendary?
 
 # %% [markdown]
 # ## Pairplots of variables
+
+# %%
+pkmn_corr = pkmn_join.corr()
 
 # %%
 most_corr_num_features = pkmn_corr['Legendary'].sort_values(ascending=False)[1:7].index.values
@@ -200,9 +206,6 @@ plt.show();
 # ## Heatmaps of Correlation against Legendary
 
 # %%
-pkmn_corr = pkmn_join.corr()
-
-# %%
 fig, ax = plt.subplots(1,1, figsize=(9,7))
 sns.heatmap(pkmn_corr, 
             cmap='gist_gray', 
@@ -231,7 +234,7 @@ t -= 0.5
 plt.ylim(b, t)
 plt.xticks(rotation=45)
 plt.yticks(rotation=0)
-plt.savefig('heatmap.png')
+plt.savefig('/users/rancher/Google Drive/Coding/website/github_pages/images/heatmap.png')
 plt.show();
 
 # %%
@@ -240,7 +243,7 @@ pkmn_corr['Legendary'].sort_values(ascending=False)
 # %% [markdown]
 # Legendary seems most highly correlated with the individual stats `Sp. Atk`, `Sp. Def`, `Attack`, and `Speed`, however we see the highest correlation with `Total Stats`.  
 #
-# There is also 
+# Legendary is also somewhat correlated with `Wins`.
 
 # %% [markdown]
 # # kNN classification - Predicting legendary status from pokemon stats (HP, Defense, ..., num_wins_in_combat)
@@ -681,7 +684,10 @@ ConfusionMatrixDisplay.from_estimator(knn_total_stats,
                                       y_gen_7,
                                       cmap="Greens",
                                       display_labels=['Non-Legendary', 'Legendary'],
-                                      colorbar=False);
+                                      colorbar=False)
+plt.grid(False)
+plt.title('kNN Model using Total Stats to predict legendary status on generation 7 Pokemon')
+plt.savefig("/users/rancher/Google Drive/Coding/website/github_pages/images/knn_gen_7.png");
 
 # %% [markdown]
 # Looking at the confusion matrix, we see that the model has predicted all but 2 Pokémon as being non-legendary.  Since a larger than usual proportion of Pokémon are legendary in generation 7, the kNN model that predominantly predict non-legendary is seeing a heavy hit on its accuracy and is probably not a very useful model to use.  
@@ -773,7 +779,10 @@ ConfusionMatrixDisplay.from_estimator(sk_log_reg_fit,
                                       y_gen_7,
                                       cmap="Greens",
                                       display_labels=['Non-Legendary', 'Legendary'],
-                                      colorbar=False);
+                                      colorbar=False)
+plt.grid(False)
+plt.title('Logisting Regression Model using Total Stats to predict legendary status on generation 7 Pokemon')
+plt.savefig("/users/rancher/Google Drive/Coding/website/github_pages/images/log_reg_gen_7.png");
 
 # %% [markdown]
 # Using logistic regression on the generation 7 data produces the exact same predictions as our kNN model and we see the same accuracy (82%).  The logistic regression model is also heavily biased towards predicting a Pokémon is non-legendary.
