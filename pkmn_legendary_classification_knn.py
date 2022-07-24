@@ -148,6 +148,24 @@ t -= 0.5
 plt.ylim(b, t)
 plt.show();
 
+# %%
+fig, ax = plt.subplots(1,1, figsize=(9,7))
+sns.heatmap(pkmn_corr[['Legendary']].T, 
+            cmap='gist_gray', 
+            square=True, 
+            ax=ax,
+            cbar_kws={"orientation": "horizontal"}
+            #, annot=True, fmt='.2f', annot_kws={'size':12}
+           )
+b, t = plt.ylim()
+b += 0.5
+t -= 0.5
+plt.ylim(b, t)
+plt.xticks(rotation=45)
+plt.yticks(rotation=0)
+plt.savefig('heatmap.png')
+plt.show();
+
 # %% [markdown]
 # Legendary seems most highly correlated with Total Stats, Sp. Atk, Sp. Def, Attack, Speed, and Wins
 
@@ -161,16 +179,43 @@ pkmn_corr['Legendary'].sort_values(ascending=False)
 most_corr_num_features = pkmn_corr['Legendary'].sort_values(ascending=False)[1:7].index.values
 
 # %% tags=[]
-sns.pairplot(pkmn_join[
-                            ['Total Stats',
-                             'Sp. Atk', 
-                             'Sp. Def', 
-                             'Attack', 
-                             'Speed', 
-                             'Wins', 
-                             'Legendary']
-                            ], 
-                             hue='Legendary');
+# sns.pairplot(pkmn_join[
+#                             ['Total Stats',
+#                              'Sp. Atk', 
+#                              'Sp. Def', 
+#                              'Attack', 
+#                              'Speed', 
+#                              'Wins', 
+#                              'Legendary']
+#                             ], 
+#                              hue='Legendary');
+
+# %%
+new_df = pkmn_join[['Number',
+                    'HP',
+                    'Attack',
+                    'Defense',
+                    'Sp. Atk',
+                    'Sp. Def',
+                    'Speed',
+                    'Wins',
+                    'Legendary']]
+
+sns.pairplot(data=new_df, 
+             hue='Legendary',
+             y_vars='Number')
+plt.savefig("/users/rancher/Google Drive/Coding/website/github_pages/images/pairplots.png");
+
+# %%
+new_df = pkmn_join[['Number',
+                    'Total Stats',
+                    'Legendary']]
+
+sns.scatterplot(data=new_df, 
+             hue='Legendary',
+             y='Number',
+             x='Total Stats')
+plt.savefig("/users/rancher/Google Drive/Coding/website/github_pages/images/pairplot_total_stats.png");
 
 # %% [markdown]
 # For most, if not all plots, we see a tendency for Legendary pokemon to cluster in the upper right of each scatter plot, indicating that Legendary pokemon tend to have high stats as compared to non-legendary pokemon.  These predictors are probably going to be the most important for our model's performance.
@@ -185,7 +230,7 @@ plt.legend(['Legendary', 'Non-Legendary'])
 plt.show();
 
 # %% [markdown]
-# Focusing on the aggregated total stats, we see legendary pokemon are towards the top.  I expect this predcitor will be very useful in our model.
+# Focusing on the aggregated total stats, we see legendary pokemon are towards the top.  I expect this predictor will be very useful in our model.
 
 # %% [markdown]
 # # kNN classification - Predicting legendary status from pokemon stats (HP, Defense, ..., num_wins_in_combat)
@@ -656,11 +701,21 @@ sm_log_reg_fit.summary()
 # The coefficient of -0.0045 means that for a one unit increase in `Total Stats` we expect to see a decrease of 0.0045 in the log odds for predicting a Pokémon as non-legendary.  In other words, Pokémon with higher total stats are less likely to be non-legendary.
 
 # %%
-test_df = pd.concat([pkmn_join[['Total Stats', 'Legendary']], pd.Series(y_prob, index=np.arange(1,801), name='Predicted Probability')], axis=1)
-#test_df
+sk_log_reg_model = LogisticRegression()
+sk_log_reg_fit = sk_log_reg_model.fit(X, y)
+
+y_prob_non_legendary = sk_log_reg_fit.predict_proba(X)
+
+log_reg_proba_df = pd.concat([pkmn_join[['Total Stats', 'Legendary']],
+                              pd.Series(y_prob_non_legendary[:,0
+                                ], index=np.arange(1,801),
+                     name='Predicted Probability')], axis=1)
 
 # %%
-sns.scatterplot(x = 'Total Stats', y = 'Predicted Probability', data=test_df, hue='Legendary');
+sns.scatterplot(x='Total Stats',
+                y='Predicted Probability',
+                data=log_reg_proba_df,
+                hue='Legendary');
 
 # %% [markdown]
 # The graph above provides a nice visual representation of what the -0.0045 coefficient from the summary above represents.  We can see that as `Total Stats` increases, the predicted probabilities of a Pokémon being non-legendary decrease.  This makes sense as most of the Pokémon with the highest `Total Stats` are legendary.
