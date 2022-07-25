@@ -24,6 +24,16 @@
 # 5) [Logistic Regression](#Logistic-regression)<br>
 
 # %% [markdown]
+# - [Load dataset](#Load-dataset)
+# - [The Default data set](#Figure-4.1---Default-data-set)
+# - [4.3 Logistic Regression](#4.3-Logistic-Regression)
+# - [4.4 Linear Discriminant Analysis](#4.4-Linear-Discriminant-Analysis)
+# - [Lab: 4.6.3 Linear Discriminant Analysis](#4.6.3-Linear-Discriminant-Analysis)
+# - [Lab: 4.6.4 Quadratic Discriminant Analysis](#4.6.4-Quadratic-Discriminant-Analysis)
+# - [Lab: 4.6.5 K-Nearest Neighbors](#4.6.5-K-Nearest-Neighbors)
+# - [Lab: 4.6.6 An Application to Caravan Insurance Data](#4.6.6-An-Application-to-Caravan-Insurance-Data)
+
+# %% [markdown]
 # # Imports and loading data
 
 # %%
