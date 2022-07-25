@@ -17,11 +17,11 @@
 # # Table of Contents
 
 # %% [markdown]
-# 1) [Loading and viewing dataset](#Imports-and-loading-data)
-# 2) [Joining tables](#Joins)
-# 3) [Correlation between features and legendary](#Which-numerical-features-are-most-highly-correlated-with-a-Pokémon-being-legendary?)
-# 4) [kNN Classification](#kNN-classification)
-# 5) [Logistic Regression](#Logistic-regression)
+# 1) [Loading and viewing dataset](#Imports-and-loading-data)<br>
+# 2) [Joining tables](#Joins)<br>
+# 3) [Correlation between features and legendary](#Which-numerical-features-are-most-highly-correlated-with-a-Pokémon-being-legendary?)<br>
+# 4) [kNN Classification](#kNN-classification)<br>
+# 5) [Logistic Regression](#Logistic-regression)<br>
 
 # %% [markdown]
 # # Imports and loading data
