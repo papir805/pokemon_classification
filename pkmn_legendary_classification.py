@@ -14,6 +14,16 @@
 # ---
 
 # %% [markdown]
+# # Table of Contents
+
+# %% [markdown]
+# 1) [Loading and viewing dataset](#Imports-and-loading-data)
+# 2) [Joining tables](#Joins)
+# 3) [Correlation between features and legendary](#Which-numerical-features-are-most-highly-correlated-with-a-Pokémon-being-legendary?)
+# 4) [kNN Classification](#kNN-classification)
+# 5) [Logistic Regression](#Logistic-regression)
+
+# %% [markdown]
 # # Imports and loading data
 
 # %%
@@ -132,7 +142,7 @@ print(num_combats == total_wins)
 pkmn_join.to_csv("./pokemon_data/pkmn_join.csv")
 
 # %% [markdown]
-# # Which numerical features are most highly correlated with a pokemon being legendary?
+# # Which numerical features are most highly correlated with a Pokémon being legendary?
 
 # %% [markdown]
 # ## Pairplots of variables
@@ -246,7 +256,8 @@ pkmn_corr['Legendary'].sort_values(ascending=False)
 # Legendary is also somewhat correlated with `Wins`.
 
 # %% [markdown]
-# # kNN classification - Predicting legendary status from pokemon stats (HP, Defense, ..., num_wins_in_combat)
+# # kNN classification
+# Predicting legendary status from pokemon stats (HP, Defense, ..., num_wins_in_combat)
 
 # %%
 pkmn_join_copy = pkmn_join.copy(deep=True)
@@ -700,7 +711,7 @@ plt.savefig("/users/rancher/Google Drive/Coding/website/github_pages/images/poke
 # Moving on.
 
 # %% [markdown]
-# # Logistic Regression
+# # Logistic regression
 # Because we already have a reasonable idea of which features are most correlated with a Pokémon being legendary, I'll create a logistic regression model that uses `Total Stats` and check its performance on new generation 7 Pokémon data, then compare against the kNN model from earlier.
 
 # %% [markdown]
