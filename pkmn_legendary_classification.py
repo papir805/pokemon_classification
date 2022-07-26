@@ -13,8 +13,8 @@
 #     name: python3
 # ---
 
-# %% [markdown]
-# # Table of Contents
+# %% [markdown] jp-MarkdownHeadingCollapsed=true tags=[]
+# <font size="+5">Table of Contents </font>
 
 # %% [markdown]
 # 1) [Loading and viewing dataset](#Imports-and-loading-data)<br>
