@@ -17,7 +17,7 @@ Important Python libraries used: `SKlearn`, `Pandas`, `Matplotlib`, `seaborn`
 ## How to use this repository:
 To see the data that was used: [pokemon_table](https://github.com/papir805/pokemon_classification/blob/main/pokemon_data/Pokemon_with_correct_pkmn_numbers.csv) or [combats_table](https://github.com/papir805/pokemon_classification/blob/main/pokemon_data/combats.csv)
 
-To see the code I wrote to analyze the data and build kNN and logistic regression models: [click here](https://github.com/papir805/pokemon_classification/blob/main/pkmn_legendary_classification.ipynb)
+To see the code I wrote to analyze the data and build kNN and logistic regression models: [click here](https://nbviewer.org/github/papir805/pokemon_classification/blob/main/pkmn_legendary_classification.ipynb)
 
 ## Method
 1) Left-Join Pokémon table and Combats table.
