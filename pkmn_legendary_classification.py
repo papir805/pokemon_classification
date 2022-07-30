@@ -35,7 +35,7 @@ import seaborn as sns
 import statsmodels.api as sm
 
 from sklearn.preprocessing import StandardScaler
-from sklearn.model_selection import train_test_split, cross_val_score, GridSearchCV, RepeatedKFold
+from sklearn.model_selection import train_test_split, cross_val_score, GridSearchCV, RepeatedKFold, RepeatedStratifiedKFold
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.metrics import confusion_matrix
 from sklearn.linear_model import LogisticRegression
@@ -465,7 +465,7 @@ print(F"Highest model performance: {knn_total_stats_gscv.best_score_}")
 # Slightly better performance, with a slightly more complex n_neighbors of 5, but now the model uses only one predictor.  Using predictors of `Total Stats`, or `Total Stats` and `Wins`, both seem like reasonable choices for our final model.  Let's investigate their performance a little further.
 
 # %% [markdown]
-# ## Further investigating performance of our two top models
+# ## Checking performance using a Train/Test Split
 
 # %% [markdown] tags=[]
 # ### Model: Total stats and wins
@@ -613,7 +613,7 @@ plt.savefig("/users/rancher/Google Drive/Coding/website/github_pages/images/poke
 # Let's see how well both of these models predict on real testing data from a newer Pokémon generation.
 
 # %% [markdown]
-# ## How does it perform on pokemon data from generation 7?
+# ## Checking performance on completely new pokemon from generation 7
 
 # %%
 complete = pd.read_csv("./pokemon_data/complete/pokemon_complete.csv")
@@ -801,9 +801,442 @@ plt.title('Logisting Regression Model using Total Stats to predict legendary sta
 plt.savefig("/users/rancher/Google Drive/Coding/website/github_pages/images/pokemon_classifier/log_reg_gen_7.png", bbox_inches="tight");
 
 # %% [markdown]
-# Using logistic regression on the generation 7 data produces the exact same predictions as our kNN model and we see the same accuracy (82%).  The logistic regression model is also heavily biased towards predicting a Pokémon is non-legendary.
-#
-# kNN and now Logistic regression both don't look like a great models to use.  Perhaps a different type of model would perform better, but for now it we're left in the dark. 
+# Using logistic regression on the generation 7 data produces the exact same predictions as our kNN model and we see the same accuracy (82%).  The logistic regression model is also heavily biased towards predicting a Pokémon is non-legendary. 
+
+# %% [markdown]
+# # Overcoming the obstacle using SMOTE (Synthetic Minority Over-Sampling Technique) with Imbalanced Learn
+
+# %%
+import imblearn
+
+# %%
+imblearn.__version__
+
+# %%
+oversample = imblearn.over_sampling.SMOTE()
+
+# %%
+X_oversample, y_oversample = oversample.fit_resample(X, y)
+
+# %%
+from collections import Counter
+
+# %%
+counter = Counter(y_oversample)
+
+# %%
+counter.items()
+
+# %% [markdown]
+# ## kNN
+
+# %%
+over = imblearn.over_sampling.SMOTE(sampling_strategy=0.1)
+under = imblearn.under_sampling.RandomUnderSampler(sampling_strategy=0.5)
+
+steps = [('o', over), ('u', under)]
+pipeline = imblearn.pipeline.Pipeline(steps=steps)
+
+X_over_under, y_over_under = pipeline.fit_resample(X, y)
+
+# %%
+cv = RepeatedStratifiedKFold(n_splits=10, n_repeats=3, random_state=1)
+
+knn_model = KNeighborsClassifier()
+
+knn_smote = cross_val_score(knn_model, X_over_under, y_over_under, scoring='roc_auc', cv=cv, n_jobs=-1)
+
+# %%
+print("k-Fold Repeated Cross Validation")
+print("--------------------------------")
+print(F"Average ROC AUC: {knn_smote.mean():.3f}")
+print(F"Std Dev: {knn_smote.std():.3f}")
+
+# %%
+steps = [('over', imblearn.over_sampling.SMOTE()), ('model', KNeighborsClassifier())]
+pipeline = imblearn.pipeline.Pipeline(steps=steps)
+
+# %%
+cv = RepeatedStratifiedKFold(n_splits=10, n_repeats=3, random_state=1)
+
+knn_smote = cross_val_score(pipeline, X, y, scoring='roc_auc', cv=cv, n_jobs=-1)
+
+# %%
+print("k-Fold Repeated Cross Validation")
+print("--------------------------------")
+print(F"Average ROC AUC: {knn_smote.mean():.3f}")
+print(F"Std Dev: {knn_smote.std():.3f}")
+
+# %%
+knn_model = KNeighborsClassifier()
+over = imblearn.over_sampling.SMOTE(sampling_strategy=0.1)
+under = imblearn.under_sampling.RandomUnderSampler(sampling_strategy=0.5)
+steps = [('over', over), ('under', under), ('model', knn_model)]
+pipeline = imblearn.pipeline.Pipeline(steps=steps)
+
+# %%
+cv = RepeatedStratifiedKFold(n_splits=10, n_repeats=3, random_state=1)
+
+knn_smote = cross_val_score(pipeline, X, y, scoring='roc_auc', cv=cv, n_jobs=-1)
+
+# %%
+print("k-Fold Repeated Cross Validation")
+print("--------------------------------")
+print(F"Average ROC AUC: {knn_smote.mean():.3f}")
+print(F"Std Dev: {knn_smote.std():.3f}")
+
+# %% [markdown]
+# ### Hyperparameter tuning
+
+# %%
+k_values = np.arange(1,11)
+
+for k in k_values:
+    knn_model = KNeighborsClassifier()
+    over = imblearn.over_sampling.SMOTE(sampling_strategy=0.1, k_neighbors=k)
+    under = imblearn.under_sampling.RandomUnderSampler(sampling_strategy=0.5)
+    steps = [('over', over), ('under', under), ('model', knn_model)]
+    pipeline = imblearn.pipeline.Pipeline(steps=steps)
+    
+    cv = RepeatedStratifiedKFold(n_splits=10, n_repeats=3, random_state=1)
+
+    knn_smote = cross_val_score(pipeline, X, y, scoring='roc_auc', cv=cv, n_jobs=-1)
+    score = knn_smote.mean()
+    print(F"> k={k}, Mean ROC AUC: {score:.3f}")
+
+# %%
+over_sampling_strategy = np.arange(0.1, 0.51, 0.1)
+
+for num in over_sampling_strategy:
+    knn_model = KNeighborsClassifier()
+    over = imblearn.over_sampling.SMOTE(sampling_strategy=num, k_neighbors=6)
+    under = imblearn.under_sampling.RandomUnderSampler(sampling_strategy=0.5)
+    steps = [('over', over), ('under', under), ('model', knn_model)]
+    pipeline = imblearn.pipeline.Pipeline(steps=steps)
+    
+    cv = RepeatedStratifiedKFold(n_splits=10, n_repeats=3, random_state=1)
+
+    knn_smote = cross_val_score(pipeline, X, y, scoring='roc_auc', cv=cv, n_jobs=-1)
+    score = knn_smote.mean()
+    print(F"> over_sampling_strategy={num}, Mean ROC AUC: {score:.3f}")
+
+# %%
+under_sampling_strategy = np.arange(0.1, 1.01, 0.1)
+
+for num in under_sampling_strategy:
+    knn_model = KNeighborsClassifier()
+    over = imblearn.over_sampling.SMOTE(sampling_strategy=0.1, k_neighbors=6)
+    under = imblearn.under_sampling.RandomUnderSampler(sampling_strategy=num)
+    steps = [('over', over), ('under', under), ('model', knn_model)]
+    pipeline = imblearn.pipeline.Pipeline(steps=steps)
+    
+    cv = RepeatedStratifiedKFold(n_splits=10, n_repeats=3, random_state=1)
+
+    knn_smote = cross_val_score(pipeline, X, y, scoring='roc_auc', cv=cv, n_jobs=-1)
+    score = knn_smote.mean()
+    print(F"> over_sampling_strategy={num}, Mean ROC AUC: {score:.3f}")
+
+# %% [markdown]
+# ### Where I start making my own model
+
+# %% [markdown]
+# #### Train/Test Split
+
+# %%
+knn_model = KNeighborsClassifier()
+over = imblearn.over_sampling.SMOTE(sampling_strategy=0.1, k_neighbors=6)
+under = imblearn.under_sampling.RandomUnderSampler(sampling_strategy=0.7)
+steps = [('over', over), ('under', under)]
+pipeline = imblearn.pipeline.Pipeline(steps=steps)
+X_over_under, y_over_under = pipeline.fit_resample(X, y)
+
+X_train, X_test, y_train, y_test = train_test_split(X_over_under, y_over_under, test_size = 0.2, random_state=0)
+
+knn_fit = knn_model.fit(X_train, y_train)
+
+knn_test_preds = knn_fit.predict(X_test)
+
+# lr_preds
+# preds = log_reg_fit_auto.predict(X_test_imp_features)
+# pred_mpg01 = np.where(preds <= 0.5, 0, 1)
+
+accuracy = accuracy_score(y_test, knn_test_preds)
+test_error = 1 - accuracy
+print(F"Testing Accuracy: {accuracy:.3f}")
+print(F"Testing error: {test_error:.3f}")
+
+# %%
+ConfusionMatrixDisplay.from_predictions(y_test, 
+                                      knn_test_preds,
+                                      cmap="Greens",
+                                      display_labels=['Non-Legendary', 'Legendary'],
+                                      colorbar=False)
+plt.grid(False)
+plt.title('Logisting Regression Model using Total Stats to predict legendary status on generation 7 Pokemon')
+plt.savefig("/users/rancher/Google Drive/Coding/website/github_pages/images/pokemon_classifier/log_reg_gen_7.png", bbox_inches="tight");
+
+# %% [markdown]
+# #### Generation 7 Preds
+
+# %%
+knn_gen_7_preds = knn_fit.predict(np.array(gen_7['total_stats']).reshape(-1,1))
+
+# lr_preds
+# preds = log_reg_fit_auto.predict(X_test_imp_features)
+# pred_mpg01 = np.where(preds <= 0.5, 0, 1)
+
+accuracy = accuracy_score(y_gen_7, knn_gen_7_preds)
+test_error = 1 - accuracy
+print(F"Testing Accuracy: {accuracy:.3f}")
+print(F"Testing error: {test_error:.3f}")
+
+# %%
+ConfusionMatrixDisplay.from_predictions(y_gen_7, 
+                                      knn_gen_7_preds,
+                                      cmap="Greens",
+                                      display_labels=['Non-Legendary', 'Legendary'],
+                                      colorbar=False)
+plt.grid(False)
+plt.title('Logisting Regression Model using Total Stats to predict legendary status on generation 7 Pokemon')
+plt.savefig("/users/rancher/Google Drive/Coding/website/github_pages/images/pokemon_classifier/log_reg_gen_7.png", bbox_inches="tight");
+
+# %% [markdown]
+# #### Generation 8 Predictions
+
+# %%
+all_generations = pd.read_csv("./pokemon_data/full_pokedex.csv", index_col=0)
+gen_8 = all_generations.loc[all_generations['generation']==8, :].copy()
+
+# %%
+gen_8.rename(columns={'total_points':'total_stats'}, inplace=True)
+
+# %%
+y_gen_8 = gen_8['is_legendary'].map({1:True, 0:False})
+
+# %%
+y_gen_8.value_counts(normalize=True)
+
+# %%
+knn_gen_8_preds = knn_fit.predict(np.array(gen_8['total_stats']).reshape(-1,1))
+
+# lr_preds
+# preds = log_reg_fit_auto.predict(X_test_imp_features)
+# pred_mpg01 = np.where(preds <= 0.5, 0, 1)
+
+accuracy = accuracy_score(y_gen_8, knn_gen_8_preds)
+test_error = 1 - accuracy
+print(F"Testing Accuracy: {accuracy:.3f}")
+print(F"Testing error: {test_error:.3f}")
+
+# %%
+ConfusionMatrixDisplay.from_predictions(y_gen_8, 
+                                      knn_gen_8_preds,
+                                      cmap="Greens",
+                                      display_labels=['Non-Legendary', 'Legendary'],
+                                      colorbar=False)
+plt.grid(False)
+plt.title('Logisting Regression Model using Total Stats to predict legendary status on generation 7 Pokemon')
+plt.savefig("/users/rancher/Google Drive/Coding/website/github_pages/images/pokemon_classifier/log_reg_gen_7.png", bbox_inches="tight");
+
+# %%
+
+# %%
+
+# %%
+
+# %%
+
+# %% [markdown]
+# ## Logistic Regression
+
+# %%
+over = imblearn.over_sampling.SMOTE(sampling_strategy=0.1)
+under = imblearn.under_sampling.RandomUnderSampler(sampling_strategy=0.5)
+
+steps = [('o', over), ('u', under)]
+pipeline = imblearn.pipeline.Pipeline(steps=steps)
+
+X_over_under, y_over_under = pipeline.fit_resample(X, y)
+
+# %%
+cv = RepeatedStratifiedKFold(n_splits=10, n_repeats=3, random_state=1)
+
+sk_log_reg_model = LogisticRegression()
+
+sk_log_reg_smote = cross_val_score(sk_log_reg_model, X_over_under, y_over_under, scoring='roc_auc', cv=cv, n_jobs=-1)
+
+# %%
+print("k-Fold Repeated Cross Validation")
+print("--------------------------------")
+print(F"Average ROC AUC: {sk_log_reg_smote.mean():.3f}")
+print(F"Std Dev: {sk_log_reg_smote.std():.3f}")
+
+# %%
+steps = [('over', imblearn.over_sampling.SMOTE()), ('model', LogisticRegression())]
+pipeline = imblearn.pipeline.Pipeline(steps=steps)
+
+# %%
+cv = RepeatedStratifiedKFold(n_splits=10, n_repeats=3, random_state=1)
+
+sk_log_reg_smote = cross_val_score(pipeline, X, y, scoring='roc_auc', cv=cv, n_jobs=-1)
+
+# %%
+print("k-Fold Repeated Cross Validation")
+print("--------------------------------")
+print(F"Average ROC AUC: {sk_log_reg_smote.mean():.3f}")
+print(F"Std Dev: {sk_log_reg_smote.std():.3f}")
+
+# %%
+sk_log_reg_model = LogisticRegression()
+over = imblearn.over_sampling.SMOTE(sampling_strategy=0.1)
+under = imblearn.under_sampling.RandomUnderSampler(sampling_strategy=0.5)
+steps = [('over', over), ('under', under), ('model', sk_log_reg_model)]
+pipeline = imblearn.pipeline.Pipeline(steps=steps)
+
+# %%
+cv = RepeatedStratifiedKFold(n_splits=10, n_repeats=3, random_state=1)
+
+sk_log_reg_smote = cross_val_score(pipeline, X, y, scoring='roc_auc', cv=cv, n_jobs=-1)
+
+# %%
+print("k-Fold Repeated Cross Validation")
+print("--------------------------------")
+print(F"Average ROC AUC: {sk_log_reg_smote.mean():.3f}")
+print(F"Std Dev: {sk_log_reg_smote.std():.3f}")
+
+# %% [markdown]
+# ### Hyperparameter tuning
+
+# %%
+k_values = np.arange(1,8)
+
+for k in k_values:
+    sk_log_reg_model = LogisticRegression()
+    over = imblearn.over_sampling.SMOTE(sampling_strategy=0.1, k_neighbors=k)
+    under = imblearn.under_sampling.RandomUnderSampler(sampling_strategy=0.5)
+    steps = [('over', over), ('under', under), ('model', sk_log_reg_model)]
+    pipeline = imblearn.pipeline.Pipeline(steps=steps)
+    
+    cv = RepeatedStratifiedKFold(n_splits=10, n_repeats=3, random_state=1)
+
+    sk_log_reg_smote = cross_val_score(pipeline, X, y, scoring='roc_auc', cv=cv, n_jobs=-1)
+    score = sk_log_reg_smote.mean()
+    print(F"> k={k}, Mean ROC AUC: {score:.3f}")
+
+# %%
+over_sampling_strategy = np.arange(0.1, 0.51, 0.1)
+
+for num in over_sampling_strategy:
+    sk_log_reg_model = LogisticRegression()
+    over = imblearn.over_sampling.SMOTE(sampling_strategy=0.1)
+    under = imblearn.under_sampling.RandomUnderSampler(sampling_strategy=num)
+    steps = [('over', over), ('under', under), ('model', sk_log_reg_model)]
+    pipeline = imblearn.pipeline.Pipeline(steps=steps)
+    
+    cv = RepeatedStratifiedKFold(n_splits=10, n_repeats=3, random_state=1)
+
+    sk_log_reg_smote = cross_val_score(pipeline, X, y, scoring='roc_auc', cv=cv, n_jobs=-1)
+    score = sk_log_reg_smote.mean()
+    print(F"> over_sampling_strategy={num}, Mean ROC AUC: {score:.3f}")
+
+# %%
+
+# %%
+
+# %%
+
+# %%
+
+# %% [markdown]
+# ### Where I start making my own model
+
+# %% [markdown]
+# #### Train/Test Split
+
+# %%
+sk_log_reg_model = LogisticRegression()
+over = imblearn.over_sampling.SMOTE(sampling_strategy=0.1)
+under = imblearn.under_sampling.RandomUnderSampler(sampling_strategy=0.7)
+steps = [('over', over), ('under', under)]
+pipeline = imblearn.pipeline.Pipeline(steps=steps)
+X_over_under, y_over_under = pipeline.fit_resample(X, y)
+
+X_train, X_test, y_train, y_test = train_test_split(X_over_under, y_over_under, test_size = 0.2, random_state=0)
+
+sk_log_reg_fit = sk_log_reg_model.fit(X_train, y_train)
+
+sk_log_reg_test_preds = sk_log_reg_fit.predict(X_test)
+
+# lr_preds
+# preds = log_reg_fit_auto.predict(X_test_imp_features)
+# pred_mpg01 = np.where(preds <= 0.5, 0, 1)
+
+accuracy = accuracy_score(y_test, sk_log_reg_test_preds)
+test_error = 1 - accuracy
+print(F"Testing Accuracy: {accuracy:.3f}")
+print(F"Testing error: {test_error:.3f}")
+
+# %%
+ConfusionMatrixDisplay.from_predictions(y_test, 
+                                      sk_log_reg_test_preds,
+                                      cmap="Greens",
+                                      display_labels=['Non-Legendary', 'Legendary'],
+                                      colorbar=False)
+plt.grid(False)
+plt.title('Logisting Regression Model using Total Stats to predict legendary status on generation 7 Pokemon')
+plt.savefig("/users/rancher/Google Drive/Coding/website/github_pages/images/pokemon_classifier/log_reg_gen_7.png", bbox_inches="tight");
+
+# %% [markdown]
+# #### Generation 7 Preds
+
+# %%
+sk_log_reg_gen_7_preds = sk_log_reg_fit.predict(np.array(gen_7['total_stats']).reshape(-1,1))
+
+# lr_preds
+# preds = log_reg_fit_auto.predict(X_test_imp_features)
+# pred_mpg01 = np.where(preds <= 0.5, 0, 1)
+
+accuracy = accuracy_score(y_gen_7, sk_log_reg_gen_7_preds)
+test_error = 1 - accuracy
+print(F"Testing Accuracy: {accuracy:.3f}")
+print(F"Testing error: {test_error:.3f}")
+
+# %%
+ConfusionMatrixDisplay.from_predictions(y_gen_7, 
+                                      sk_log_reg_gen_7_preds,
+                                      cmap="Greens",
+                                      display_labels=['Non-Legendary', 'Legendary'],
+                                      colorbar=False)
+plt.grid(False)
+plt.title('Logisting Regression Model using Total Stats to predict legendary status on generation 7 Pokemon')
+plt.savefig("/users/rancher/Google Drive/Coding/website/github_pages/images/pokemon_classifier/log_reg_gen_7.png", bbox_inches="tight");
+
+# %% [markdown]
+# #### Generation 8 Preds
+
+# %%
+sk_log_reg_gen_8_preds = sk_log_reg_fit.predict(np.array(gen_8['total_stats']).reshape(-1,1))
+
+# lr_preds
+# preds = log_reg_fit_auto.predict(X_test_imp_features)
+# pred_mpg01 = np.where(preds <= 0.5, 0, 1)
+
+accuracy = accuracy_score(y_gen_8, sk_log_reg_gen_8_preds)
+test_error = 1 - accuracy
+print(F"Testing Accuracy: {accuracy:.3f}")
+print(F"Testing error: {test_error:.3f}")
+
+# %%
+ConfusionMatrixDisplay.from_predictions(y_gen_8, 
+                                      sk_log_reg_gen_8_preds,
+                                      cmap="Greens",
+                                      display_labels=['Non-Legendary', 'Legendary'],
+                                      colorbar=False)
+plt.grid(False)
+plt.title('Logisting Regression Model using Total Stats to predict legendary status on generation 7 Pokemon')
+plt.savefig("/users/rancher/Google Drive/Coding/website/github_pages/images/pokemon_classifier/log_reg_gen_7.png", bbox_inches="tight");
+
+# %%
 
 # %% [markdown]
 # # The end
