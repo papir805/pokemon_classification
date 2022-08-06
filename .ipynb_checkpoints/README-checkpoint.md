@@ -62,4 +62,4 @@ There are probably better models out there, but since they're performing equally
 
 
 # Coming Soon
-Will other models like Linear Discriminant Analysis or Quadratic Discriminant Analysis perform better?  Also, revisiting kNN and logistic regression one more time by altering the bayes decision boundary.
+Will other models like Linear Discriminant Analysis or Quadratic Discriminant Analysis perform better?  Also, revisiting kNN and logistic regression one more time and altering the bayes decision boundary.
