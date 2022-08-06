@@ -848,7 +848,7 @@ plt.savefig("/users/rancher/Google Drive/Coding/website/github_pages/images/poke
 # Afterwards, a kNN model can be built using the transformed and balanced dataset and we can estimate the testing performance using cross validation.
 
 # %% [markdown]
-# ### Evaluating model performance on test data after SMOTE
+# ### Evaluating model performance after SMOTE
 
 # %% [markdown]
 # First I'll define a pipeline based on the following steps:
@@ -890,12 +890,12 @@ print(F"Average testing Accuracy: {knn_smote['test_acc'].mean():.3f}")
 print(F"Std Dev: {knn_smote['test_acc'].std():.3f}")
 
 # %% [markdown]
-# Using SMOTE, the average testing accuracy (95.8%) is close to the testing accuracy of kNN model from earlier (96.25%).  
+# Using SMOTE, the average testing accuracy (95.8%) is close to the testing accuracy of kNN model from earlier (96.25%).
 #
 # Unfortunately this isn't an improvement, however its recommended to use under-sampling of the majority class in conjuction with over-sampling of the minority class, to see the best performance.  Let's try.
 
 # %% [markdown]
-# ### Evaluating model performance on test data after using both over and under-sampling techniques
+# ### Evaluating model performance after using both over and under-sampling techniques
 
 # %% [markdown]
 # I'll begin by defining a new pipeline that does the same as the last, however it will also under-sample the majority class.  Using the same cross validation strategy as last time, we can estimate the performance of this new kNN model.
@@ -928,7 +928,9 @@ print(F"Average testing accuracy: {knn_smote['test_acc'].mean():.3f}")
 print(F"Std Dev: {knn_smote['test_acc'].std():.3f}")
 
 # %% [markdown]
-# Including the under-sampling strategy boosts the average ROC AUC up to 0.962 compared to the 0.890 when using SMOTE alone, but the average testing accuracy remains roughly the same at (94.5%).
+# Including the under-sampling strategy boosts the average ROC AUC up to 0.962 compared to the 0.890 when using SMOTE alone.  This is significant because with AUC of 0.962, the model will correctly distinguish between classes 96.2% of the time.  
+#
+# The average testing accuracy remains roughly the same at (94.5%).
 #
 # This is a step in the right direction, but perhaps after tuning the over_sampling and under_sampling strategies, the model will perform better.  Let's see.
 
@@ -1014,10 +1016,10 @@ for num in under_sampling_strategy:
 # Increasing sampling_strategy has a tendency to increase the average ROC AUC and we see the highest ROC AUC when sampling_strategy is 1.0.  In close second is when sampling_strategy is 0.6.
 
 # %% [markdown]
-# ## Building the model
+# ### Building the model
 
 # %% [markdown]
-# ### Train/Test Split
+# #### Train/Test Split
 
 # %% [markdown]
 # First I'll create a train/test split of the data, then define a data pipeline that will first over-sample the minority class, the under-sample the majority class in the training data.  Using the transformed training data, I'll build a kNN model and check its performance on un-transformed testing data.
@@ -1065,7 +1067,7 @@ plt.savefig("/users/rancher/Google Drive/Coding/website/github_pages/images/poke
 # Let's see if the model can adapt to completely new Pokémon again by testing using data from generation 7 Pokémon.
 
 # %% [markdown]
-# ### Generation 7 Preds
+# #### Generation 7 Predictions
 
 # %%
 knn_gen_7_preds = knn_fit.predict(np.array(gen_7['total_stats']).reshape(-1,1))
@@ -1102,7 +1104,7 @@ plt.savefig("/users/rancher/Google Drive/Coding/website/github_pages/images/poke
 # How will the model perform on generation 8 Pokémon?
 
 # %% [markdown]
-# ### Generation 8 Predictions
+# #### Generation 8 Predictions
 
 # %%
 all_generations = pd.read_csv("./pokemon_data/full_pokedex.csv", index_col=0)
@@ -1144,7 +1146,11 @@ plt.savefig("/users/rancher/Google Drive/Coding/website/github_pages/images/poke
 
 # %% [markdown]
 # Looking at the predictions, only 9 observations were misclassified and the model is doing a good job of identifying both legendary and non-legendary Pokémon.  
-#
+
+# %% [markdown]
+# ### Conclusion
+
+# %% [markdown]
 # For now, this kNN model appears good and because it's our only good model so far, is the best model we have at the moment.
 #
 # Let's see what happens if we try logistic regression using the over and under-sampling techniques from earlier.
@@ -1174,6 +1180,12 @@ plt.savefig("/users/rancher/Google Drive/Coding/website/github_pages/images/poke
 # print(F"Average ROC AUC: {sk_log_reg_smote.mean():.3f}")
 # print(F"Std Dev: {sk_log_reg_smote.std():.3f}")
 
+# %% [markdown]
+# ### Evaluating model performance after SMOTE
+
+# %% [markdown]
+# Like before, I'll define a data pipeline  that will over_sample the minority class and perform repeated stratified kfold cross validation on logistic regression models to estimate accuracy on testing data.
+
 # %%
 steps = [('over', imblearn.over_sampling.SMOTE(random_state=42)), ('model', LogisticRegression())]
 pipeline = imblearn.pipeline.Pipeline(steps=steps)
@@ -1181,13 +1193,28 @@ pipeline = imblearn.pipeline.Pipeline(steps=steps)
 # %%
 cv = RepeatedStratifiedKFold(n_splits=10, n_repeats=3, random_state=1)
 
-sk_log_reg_smote = cross_val_score(pipeline, X, y, scoring='roc_auc', cv=cv, n_jobs=-1)
+sk_log_reg_smote = cross_validate(pipeline, 
+                                  X, 
+                                  y, 
+                                  scoring={'ROC_AUC':'roc_auc',
+                                           'acc':'accuracy'},
+                                  cv=cv, 
+                                  n_jobs=-1)
 
 # %%
 print("k-Fold Repeated Cross Validation")
 print("--------------------------------")
-print(F"Average ROC AUC: {sk_log_reg_smote.mean():.3f}")
-print(F"Std Dev: {sk_log_reg_smote.std():.3f}")
+print(F"Average testing ROC AUC: {sk_log_reg_smote['test_ROC_AUC'].mean():.3f}")
+print(F"Std Dev: {sk_log_reg_smote['test_ROC_AUC'].std():.3f}")
+print()
+print(F"Average testing accuracy: {sk_log_reg_smote['test_acc'].mean():.3f}")
+print(F"Std Dev: {sk_log_reg_smote['test_acc'].std():.3f}")
+
+# %% [markdown]
+# The logistic regression model after smote has a really solid ROC AUC of 0.970 and accuracy of 93.2%.  The accuracy is about the same as our logistic regression model from earlier, but we haven't attempted an under-sampling strategy yet.
+
+# %% [markdown]
+# ### Evaluating model performance after using both over and under-sampling techniques
 
 # %%
 sk_log_reg_model = LogisticRegression()
@@ -1199,16 +1226,33 @@ pipeline = imblearn.pipeline.Pipeline(steps=steps)
 # %%
 cv = RepeatedStratifiedKFold(n_splits=10, n_repeats=3, random_state=1)
 
-sk_log_reg_smote = cross_val_score(pipeline, X, y, scoring='roc_auc', cv=cv, n_jobs=-1)
+sk_log_reg_smote = cross_validate(pipeline, 
+                                  X, 
+                                  y, 
+                                  scoring={'ROC_AUC':'roc_auc',
+                                           'acc':'accuracy'},
+                                  cv=cv, 
+                                  n_jobs=-1)
 
 # %%
 print("k-Fold Repeated Cross Validation")
 print("--------------------------------")
-print(F"Average ROC AUC: {sk_log_reg_smote.mean():.3f}")
-print(F"Std Dev: {sk_log_reg_smote.std():.3f}")
+print(F"Average testing ROC AUC: {sk_log_reg_smote['test_ROC_AUC'].mean():.3f}")
+print(F"Std Dev: {sk_log_reg_smote['test_ROC_AUC'].std():.3f}")
+print()
+print(F"Average testing accuracy: {sk_log_reg_smote['test_acc'].mean():.3f}")
+print(F"Std Dev: {sk_log_reg_smote['test_acc'].std():.3f}")
 
 # %% [markdown]
-# ### Hyperparameter tuning
+# After employing both an over and under sampling strategy, we still see an average ROC AUC of 0.970, but the testing accuracy has risen slightly to 93.7%
+#
+# If we attempt some hyperparameter tuning, perhaps this will improve more.
+
+# %% [markdown]
+# #### Hyperparameter tuning
+
+# %% [markdown]
+# ##### Tuning k_neighbors
 
 # %%
 k_values = np.arange(1,8)
@@ -1226,13 +1270,19 @@ for k in k_values:
     score = sk_log_reg_smote.mean()
     print(F"> k={k}, Mean ROC AUC: {score:.3f}")
 
+# %% [markdown]
+# Because ROC AUC stays the same for all values of k, I'll stick with the default value of k=5.
+
+# %% [markdown]
+# ##### Tuning sampling_strategy for over-sampling
+
 # %%
 over_sampling_strategy = np.arange(0.1, 0.51, 0.1)
 
 for num in over_sampling_strategy:
     sk_log_reg_model = LogisticRegression()
-    over = imblearn.over_sampling.SMOTE(sampling_strategy=0.1, random_state=42)
-    under = imblearn.under_sampling.RandomUnderSampler(sampling_strategy=num, random_state=42)
+    over = imblearn.over_sampling.SMOTE(sampling_strategy=num, random_state=42)
+    under = imblearn.under_sampling.RandomUnderSampler(sampling_strategy=0.5, random_state=42)
     steps = [('over', over), ('under', under), ('model', sk_log_reg_model)]
     pipeline = imblearn.pipeline.Pipeline(steps=steps)
     
@@ -1240,18 +1290,37 @@ for num in over_sampling_strategy:
 
     sk_log_reg_smote = cross_val_score(pipeline, X, y, scoring='roc_auc', cv=cv, n_jobs=-1)
     score = sk_log_reg_smote.mean()
-    print(F"> over_sampling_strategy={num}, Mean ROC AUC: {score:.3f}")
-
-# %%
-
-# %%
-
-# %%
-
-# %%
+    print(F"> over_sampling_strategy = {num}, Mean ROC AUC: {score:.3f}")
 
 # %% [markdown]
-# ### Where I start making my own model
+# Adjusting the sampling_strategy for over-sampling doesn't increase ROC AUC, so I'll stick with a lower level of 0.1 and keep the ratio of non-legendary to legendary Pokémon close to what's found in the original dataset.  
+#
+# Remember, originally the dataset was about 8% legendary to 92% non-legendary, which would correspond to a sampling strategy of about 0.0870 (0.08 / 0.92 = 0.0870).  
+
+# %% [markdown]
+# ##### Tuning sampling_strategy for under-sampling
+
+# %%
+under_sampling_strategy = np.arange(0.1, 1.01, 0.1)
+
+for num in under_sampling_strategy:
+    sk_log_reg_model = LogisticRegression()
+    over = imblearn.over_sampling.SMOTE(sampling_strategy=0.1, random_state=42)
+    under = imblearn.under_sampling.RandomUnderSampler(sampling_strategy=num, random_state=42)
+    steps = [('over', over), ('under', under), ('model', knn_model)]
+    pipeline = imblearn.pipeline.Pipeline(steps=steps)
+    
+    cv = RepeatedStratifiedKFold(n_splits=10, n_repeats=3, random_state=1)
+
+    knn_smote = cross_val_score(pipeline, X, y, scoring='roc_auc', cv=cv, n_jobs=-1)
+    score = knn_smote.mean()
+    print(F"> under_sampling_strategy={num}, Mean ROC AUC: {score:.3f}")
+
+# %% [markdown]
+# Increasing the sampling_strategy for under_sampling tends to have an increase on the ROC AUC.  The highest ROC AUC of 0.974 occurs when sampling_strategy is 0.7
+
+# %% [markdown]
+# ### Building the model
 
 # %% [markdown]
 # #### Train/Test Split
@@ -1262,11 +1331,12 @@ over = imblearn.over_sampling.SMOTE(sampling_strategy=0.1, random_state=42)
 under = imblearn.under_sampling.RandomUnderSampler(sampling_strategy=0.7, random_state=42)
 steps = [('over', over), ('under', under)]
 pipeline = imblearn.pipeline.Pipeline(steps=steps)
-X_over_under, y_over_under = pipeline.fit_resample(X, y)
 
-X_train, X_test, y_train, y_test = train_test_split(X_over_under, y_over_under, test_size = 0.2, random_state=0)
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.2, random_state=0)
 
-sk_log_reg_fit = sk_log_reg_model.fit(X_train, y_train)
+X_over_under_train, y_over_under_train = pipeline.fit_resample(X_train, y_train)
+
+sk_log_reg_fit = sk_log_reg_model.fit(X_over_under_train, y_over_under_train)
 
 sk_log_reg_test_preds = sk_log_reg_fit.predict(X_test)
 
@@ -1290,7 +1360,10 @@ plt.title('Logistic Regression Model using Total Stats to predict legendary stat
 plt.savefig("/users/rancher/Google Drive/Coding/website/github_pages/images/pokemon_classifier/log_reg_testing_after_smote.png", bbox_inches="tight");
 
 # %% [markdown]
-# #### Generation 7 Preds
+# The logistic regression model after over and under-sampling produces the exact same accuracy and exact same predictions as the kNN model on generation 1-6 Pokémon.  
+
+# %% [markdown]
+# #### Generation 7 Predictions
 
 # %%
 sk_log_reg_gen_7_preds = sk_log_reg_fit.predict(np.array(gen_7['total_stats']).reshape(-1,1))
@@ -1315,7 +1388,10 @@ plt.title('Logistic Regression Model using Total Stats to predict legendary stat
 plt.savefig("/users/rancher/Google Drive/Coding/website/github_pages/images/pokemon_classifier/log_reg_gen_7_after_smote.png", bbox_inches="tight");
 
 # %% [markdown]
-# #### Generation 8 Preds
+# Same accuracy and predictions on generation 7 Pokémon too.
+
+# %% [markdown]
+# #### Generation 8 Predictions
 
 # %%
 sk_log_reg_gen_8_preds = sk_log_reg_fit.predict(np.array(gen_8['total_stats']).reshape(-1,1))
@@ -1339,7 +1415,16 @@ plt.grid(False)
 plt.title('Logistic Regression Model using Total Stats to predict legendary status on generation 8 Pokemon')
 plt.savefig("/users/rancher/Google Drive/Coding/website/github_pages/images/pokemon_classifier/log_reg_gen_8_after_smote.png", bbox_inches="tight");
 
-# %%
+# %% [markdown]
+# Once again, the logistic regression model has the same accuracy as the kNN model on generation 8 Pokémon.
+
+# %% [markdown]
+# ### Conclusion
+
+# %% [markdown]
+# Right now, the logistic regression and kNN models are performing reasonably well after using over and under-sampling techniques, however neither model performs better than the other.  Both models are also reasonably simple and would be good choices to use for predicting whether a Pokémon is legendary.
+#
+# Other models may perform better and I plan to do more investigating in the future, but for now I'll stop searching.
 
 # %% [markdown]
 # # The end
