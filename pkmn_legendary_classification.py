@@ -820,32 +820,11 @@ plt.savefig("/users/rancher/Google Drive/Coding/website/github_pages/images/poke
 # %% [markdown]
 # ## kNN again
 
-# %%
-# over = imblearn.over_sampling.SMOTE(sampling_strategy=0.1)
-# under = imblearn.under_sampling.RandomUnderSampler(sampling_strategy=0.5)
-
-# steps = [('o', over), ('u', under)]
-# pipeline = imblearn.pipeline.Pipeline(steps=steps)
-
-# X_over_under, y_over_under = pipeline.fit_resample(X, y)
-
-# %%
-# cv = RepeatedStratifiedKFold(n_splits=10, n_repeats=3, random_state=1)
-
-# knn_model = KNeighborsClassifier()
-
-# knn_smote = cross_val_score(knn_model, X_over_under, y_over_under, scoring='roc_auc', cv=cv, n_jobs=-1)
-
-# %%
-# print("k-Fold Repeated Cross Validation")
-# print("--------------------------------")
-# print(F"Average ROC AUC: {knn_smote.mean():.3f}")
-# print(F"Std Dev: {knn_smote.std():.3f}")
-
 # %% [markdown]
-# Using SMOTE, we can over-sample the minority class to produce a dataset which eliminates the class imbalance.  Before using SMOTE, there was a 8% / 92% split between legendary and non-legendary Pokémon, however afterwards we should see a 50% / 50% split.  
+# Using SMOTE, we can over-sample the minority class to produce a dataset which eliminates the class imbalance.  Before using SMOTE, there was a 8% / 92% split between legendary and non-legendary Pokémon, however we can control what ratio we'd like to see afterwards using a parameter called sampling_strategy.  If no value is passed to this parameter, it defaults to creating a perfect 50% / 50% split between classes.
 #
-# Afterwards, a kNN model can be built using the transformed and balanced dataset and we can estimate the testing performance using cross validation.
+#
+# Afterwards, a kNN model can be built using the transformed dataset and we can estimate the testing performance using cross validation.
 
 # %% [markdown]
 # ### Evaluating model performance after SMOTE
@@ -853,17 +832,18 @@ plt.savefig("/users/rancher/Google Drive/Coding/website/github_pages/images/poke
 # %% [markdown]
 # First I'll define a pipeline based on the following steps:
 # 1) Use SMOTE to over-sample the minority class (legendary)
-# 2) Fit a kNN model on the over-sampled data
+# 2) Fit a kNN model using the over-sampled data
 #
-# Next, I'll define a RepeatedStratifiedKFold cross-validation strategy, that will divide the dataset into 10 stratified folds.  The folds are stratified such that each fold will maintain the same ratio of non-legendary to legendary Pokémon and this process will repeat three times.  
+# Next, I'll define a RepeatedStratifiedKFold cross-validation strategy, that will divide the dataset into ten stratified folds and this process will repeat three times.  The folds are stratified such that each will maintain the same ratio of non-legendary to legendary Pokémon.  
 #
-# For each of the three times this process happens, 10 different models will be made.  Each model will be trained on a different combination of 9/10 of the data and tested on the remaining 1/10 of the data.  The average testing performance of all 30 models will give us an estimate of the models performance on new data in the future. 
+# For each of the three times this process happens, ten different models will be made.  Each model will be trained on a different combination of nine of the ten folds and tested on the remaining one fold of the data.  We can then average the performance of all 30 models to get an estimate of the model's performance on new data in the future. 
 #
 # When the pipeline and RepeatedStratifiedKFold strategy are combined using the cross_validate() function from SKlearn:
 # 1) The data will be split into 10 stratified folds.  Nine of the folds will be transformed using SMOTE and used as a training set while the remaining fold will not be transformed and considered the testing set.
 # 2) A kNN model will be trained on the transformed training data
-# 3) The model's performance will be evaluated on un-transformed testing data
-# 4) The average testing performance over all 30 models will be calculated
+# 3) The model's performance will be evaluated on un-transformed testing data and recorded
+#
+# Afterwards, I'll average testing performance from all 30 kNN models.
 
 # %%
 steps = [('over', imblearn.over_sampling.SMOTE(random_state=42)), ('model', KNeighborsClassifier())]
@@ -892,13 +872,21 @@ print(F"Std Dev: {knn_smote['test_acc'].std():.3f}")
 # %% [markdown]
 # Using SMOTE, the average testing accuracy (95.8%) is close to the testing accuracy of kNN model from earlier (96.25%).
 #
-# Unfortunately this isn't an improvement, however its recommended to use under-sampling of the majority class in conjuction with over-sampling of the minority class, to see the best performance.  Let's try.
+# Unfortunately this isn't an improvement, however its recommended to use under-sampling of the majority class in conjuction with over-sampling of the minority class, to see the best performance.  
+#
+# Let's try.
 
 # %% [markdown]
 # ### Evaluating model performance after using both over and under-sampling techniques
 
 # %% [markdown]
-# I'll begin by defining a new pipeline that does the same as the last, however it will also under-sample the majority class.  Using the same cross validation strategy as last time, we can estimate the performance of this new kNN model.
+# I'll begin by defining a new pipeline that does the same as the last, however it will also under-sample the majority class.  
+#
+# Furthermore, I'll try sampling_strategy = 0.1 for the over-sampling strategy.  This means that first, minority classes of the data set will be over-sampled such that new synthetically created minority observations are added to the dataset until there are 1 minority observation for every 10 majority observations (1/10 = 0.1).  
+#
+# Next, using sampling_strategy = 0.5 for the under-sampling strategy means that observations from the majority class will be removed until there are 1 minority observation for ever 2 majority observation (1/2 = 0.5).
+#
+# Using the same cross validation strategy as last time, we can estimate the performance of this new kNN model after the over and under-sampling.
 
 # %%
 knn_model = KNeighborsClassifier()
@@ -930,7 +918,7 @@ print(F"Std Dev: {knn_smote['test_acc'].std():.3f}")
 # %% [markdown]
 # Including the under-sampling strategy boosts the average ROC AUC up to 0.962 compared to the 0.890 when using SMOTE alone.  This is significant because with AUC of 0.962, the model will correctly distinguish between classes 96.2% of the time.  
 #
-# The average testing accuracy remains roughly the same at (94.5%).
+# Not much change in average testing accuracy though, it remains roughly the same at (94.5%).
 #
 # This is a step in the right direction, but perhaps after tuning the over_sampling and under_sampling strategies, the model will perform better.  Let's see.
 
@@ -938,12 +926,12 @@ print(F"Std Dev: {knn_smote['test_acc'].std():.3f}")
 # #### Hyperparameter tuning - Adjusting over_sampling and under_sampling strategies
 
 # %% [markdown]
-# For the over-sampling strategy, there are two main parameters to tune:
+# For the *over-sampling* strategy, there are two main parameters to tune:
 # 1) k_neighbors: this is the number of neighbors used when constructing the transformed sample.
-# 2) sampling_strategy: this corresponds to the ratio of the number of observations in the minority class to the number of observations in the majority class, after resampling. (num_minority:num_majority)
+# 2) sampling_strategy: this corresponds to the desired ratio of the number of observations in the minority class to the number of observations in the majority class, after **over**-sampling. (num_minority/num_majority)
 #
-# For under-sampling, we can tune the sampling strategy as well:
-# 1) sampling_strategy: same as above
+# For *under-sampling*, we can tune the sampling strategy as well:
+# 1) sampling_strategy: this corresponds to the desired ratio of the number of observations in the minority class to the number of observations in the majority class, after **under**-sampling. (num_minority/num_majority)
 
 # %% [markdown]
 # ##### Tuning k_neighbors
@@ -1013,7 +1001,7 @@ for num in under_sampling_strategy:
     print(F"> over_sampling_strategy={num}, Mean ROC AUC: {score:.3f}")
 
 # %% [markdown]
-# Increasing sampling_strategy has a tendency to increase the average ROC AUC and we see the highest ROC AUC when sampling_strategy is 1.0.  In close second is when sampling_strategy is 0.6.
+# Increasing sampling_strategy has a tendency to increase the average ROC AUC and we see the highest ROC AUC of 0.970 when sampling_strategy is 1.0.  In close second is when sampling_strategy is 0.6.
 
 # %% [markdown]
 # ### Building the model
@@ -1049,7 +1037,7 @@ print(F"Testing Accuracy: {accuracy:.3f}")
 print(F"Testing error: {test_error:.3f}")
 
 # %% [markdown]
-# The model still has similar performance to before with 92.5% accuracy
+# At first glance, the model appears similar to the one without using any over or under-sampling strategies with 92.5% accuracy.
 
 # %%
 ConfusionMatrixDisplay.from_predictions(y_test, 
@@ -1062,7 +1050,7 @@ plt.title('kNN Model using Total Stats to predict legendary status on testing da
 plt.savefig("/users/rancher/Google Drive/Coding/website/github_pages/images/pokemon_classifier/knn_testing_after_smote.png", bbox_inches="tight");
 
 # %% [markdown]
-# If we look at the predictions themselves, the model correctly predicted every non-legendary Pokémon and it was less biased towards predicting a Pokémon was non-legendary.  
+# However, if we look at the predictions themselves, the model correctly predicted every non-legendary Pokémon and it was less biased towards predicting a Pokémon was non-legendary.  This is starting to look better.
 #
 # Let's see if the model can adapt to completely new Pokémon again by testing using data from generation 7 Pokémon.
 
@@ -1082,11 +1070,11 @@ print(F"Generation 7 Accuracy: {accuracy:.3f}")
 print(F"Generation 7 error: {test_error:.3f}")
 
 # %% [markdown]
-# This is a fairly significant boost compared to the kNN model from earlier.  Now accuracy is 93.8%, up from 81.25%.
+# More good news.  There's a fairly significant boost in accuracy compared to the kNN model from earlier.  Now accuracy is 93.8%, up from 81.25%.
 #
 # This is a huge win because if you recall, the kNN model from before was heavily biased towards predicting a Pokémon as non-legendary.  Because the model would predict non-legendary nearly every time, its accuracy of 81.25% wasn't much higher than the proportion of non-legendary Pokémon in generation 7, which was roughly 79%.  
 #
-# The new model trained on over and under-sampled data is adapting much better than the old model.
+# The new model trained on over and under-sampled data is adapting much better to new data.
 
 # %%
 ConfusionMatrixDisplay.from_predictions(y_gen_7, 
@@ -1151,34 +1139,12 @@ plt.savefig("/users/rancher/Google Drive/Coding/website/github_pages/images/poke
 # ### Conclusion
 
 # %% [markdown]
-# For now, this kNN model appears good and because it's our only good model so far, is the best model we have at the moment.
+# For now, this kNN model appears great and because it's our only reasonably performing model so far, it's the best one I have.
 #
 # Let's see what happens if we try logistic regression using the over and under-sampling techniques from earlier.
 
 # %% [markdown]
 # ## Logistic Regression again
-
-# %%
-# over = imblearn.over_sampling.SMOTE(sampling_strategy=0.1)
-# under = imblearn.under_sampling.RandomUnderSampler(sampling_strategy=0.5)
-
-# steps = [('o', over), ('u', under)]
-# pipeline = imblearn.pipeline.Pipeline(steps=steps)
-
-# X_over_under, y_over_under = pipeline.fit_resample(X, y)
-
-# %%
-# cv = RepeatedStratifiedKFold(n_splits=10, n_repeats=3, random_state=1)
-
-# sk_log_reg_model = LogisticRegression()
-
-# sk_log_reg_smote = cross_val_score(sk_log_reg_model, X_over_under, y_over_under, scoring='roc_auc', cv=cv, n_jobs=-1)
-
-# %%
-# print("k-Fold Repeated Cross Validation")
-# print("--------------------------------")
-# print(F"Average ROC AUC: {sk_log_reg_smote.mean():.3f}")
-# print(F"Std Dev: {sk_log_reg_smote.std():.3f}")
 
 # %% [markdown]
 # ### Evaluating model performance after SMOTE
@@ -1422,7 +1388,7 @@ plt.savefig("/users/rancher/Google Drive/Coding/website/github_pages/images/poke
 # ### Conclusion
 
 # %% [markdown]
-# Right now, the logistic regression and kNN models are performing reasonably well after using over and under-sampling techniques, however neither model performs better than the other.  Both models are also reasonably simple and would be good choices to use for predicting whether a Pokémon is legendary.
+# Right now, the logistic regression and kNN models are performing reasonably well after using over and under-sampling techniques, however neither model performs better than the other.  Both models are also relatively simple and would be good choices to use for predicting whether a Pokémon is legendary.
 #
 # Other models may perform better and I plan to do more investigating in the future, but for now I'll stop searching.
 
