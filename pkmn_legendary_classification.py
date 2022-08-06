@@ -1083,7 +1083,7 @@ ConfusionMatrixDisplay.from_predictions(y_gen_7,
                                       display_labels=['Non-Legendary', 'Legendary'],
                                       colorbar=False)
 plt.grid(False)
-plt.title('kNN Model using Total Stats to predict legendary status on generation 7 Pokemon')
+plt.title('SMOTE kNN Model to predict legendary status on generation 7 Pokemon')
 plt.savefig("/users/rancher/Google Drive/Coding/website/github_pages/images/pokemon_classifier/knn_gen_7_after_smote.png", bbox_inches="tight");
 
 # %% [markdown]
@@ -1129,7 +1129,7 @@ ConfusionMatrixDisplay.from_predictions(y_gen_8,
                                       display_labels=['Non-Legendary', 'Legendary'],
                                       colorbar=False)
 plt.grid(False)
-plt.title('kNN Model using Total Stats to predict legendary status on generation 8 Pokemon')
+plt.title('SMOTE kNN Model to predict legendary status on generation 8 Pokemon')
 plt.savefig("/users/rancher/Google Drive/Coding/website/github_pages/images/pokemon_classifier/knn_gen_8_after_smote.png", bbox_inches="tight");
 
 # %% [markdown]
@@ -1322,7 +1322,7 @@ ConfusionMatrixDisplay.from_predictions(y_test,
                                       display_labels=['Non-Legendary', 'Legendary'],
                                       colorbar=False)
 plt.grid(False)
-plt.title('Logistic Regression Model using Total Stats to predict legendary status on testing data')
+plt.title('SMOTE Logistic Regression Model to predict legendary status on testing data')
 plt.savefig("/users/rancher/Google Drive/Coding/website/github_pages/images/pokemon_classifier/log_reg_testing_after_smote.png", bbox_inches="tight");
 
 # %% [markdown]
@@ -1350,7 +1350,7 @@ ConfusionMatrixDisplay.from_predictions(y_gen_7,
                                       display_labels=['Non-Legendary', 'Legendary'],
                                       colorbar=False)
 plt.grid(False)
-plt.title('Logistic Regression Model using Total Stats to predict legendary status on generation 7 Pokemon')
+plt.title('SMOTE Logistic Regression Model to predict legendary status on generation 7 Pokemon')
 plt.savefig("/users/rancher/Google Drive/Coding/website/github_pages/images/pokemon_classifier/log_reg_gen_7_after_smote.png", bbox_inches="tight");
 
 # %% [markdown]
@@ -1378,7 +1378,7 @@ ConfusionMatrixDisplay.from_predictions(y_gen_8,
                                       display_labels=['Non-Legendary', 'Legendary'],
                                       colorbar=False)
 plt.grid(False)
-plt.title('Logistic Regression Model using Total Stats to predict legendary status on generation 8 Pokemon')
+plt.title('SMOTE Logistic Regression Model to predict legendary status on generation 8 Pokemon')
 plt.savefig("/users/rancher/Google Drive/Coding/website/github_pages/images/pokemon_classifier/log_reg_gen_8_after_smote.png", bbox_inches="tight");
 
 # %% [markdown]
@@ -1394,3 +1394,55 @@ plt.savefig("/users/rancher/Google Drive/Coding/website/github_pages/images/poke
 
 # %% [markdown]
 # # The end
+
+# %% [markdown]
+# # Some plots
+
+# %%
+fig, ax = plt.subplots(2,2,figsize=(10,10))
+
+ConfusionMatrixDisplay.from_predictions(y_gen_7, 
+                                      knn_gen_7_preds,
+                                      cmap="Greens",
+                                      display_labels=['Non-Legendary', 'Legendary'],
+                                      colorbar=False,
+                                       ax=ax[0,0])
+ax[0,0].grid(False)
+ax[0,0].set_title('SMOTE kNN Model to predict\nlegendary status on generation 7 Pokemon')
+ax[0,0].get_xaxis().set_visible(False)
+
+ConfusionMatrixDisplay.from_predictions(y_gen_8, 
+                                      knn_gen_8_preds,
+                                      cmap="Greens",
+                                     colorbar=False, ax=ax[0,1])
+ax[0,1].grid(False)
+ax[0,1].set_title('SMOTE kNN Model to predict\n legendary status on generation 8 Pokemon')
+ax[0,1].get_xaxis().set_visible(False)
+ax[0,1].get_yaxis().set_visible(False)
+
+ConfusionMatrixDisplay.from_predictions(y_gen_7, 
+                                      sk_log_reg_gen_7_preds,
+                                      cmap="Greens",
+                                      display_labels=['Non-Legendary', 'Legendary'],
+                                      colorbar=False,
+                                       ax=ax[1,0])
+ax[1,0].grid(False)
+ax[1,0].set_title('SMOTE Logistic Regression Model to predict\n legendary status on generation 7 Pokemon')
+
+
+ConfusionMatrixDisplay.from_predictions(y_gen_8, 
+                                      sk_log_reg_gen_8_preds,
+                                      cmap="Greens",
+                                      display_labels=['Non-Legendary', 'Legendary'],
+                                      colorbar=False,
+                                       ax=ax[1,1])
+ax[1,1].grid(False)
+ax[1,1].set_title('SMOTE Logistic Regression Model to predict\n legendary status on generation 8 Pokemon')
+ax[1,1].get_yaxis().set_visible(False)
+
+
+plt.tight_layout()
+
+plt.savefig("/users/rancher/Google Drive/Coding/website/github_pages/images/pokemon_classifier/smote_summary.png", bbox_inches="tight");
+
+# %%
