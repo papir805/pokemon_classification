@@ -32,6 +32,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
+import math
 
 import statsmodels.api as sm
 
@@ -56,9 +57,9 @@ sns.set_style('darkgrid')
 # %%
 pkmn = pd.read_csv('./pokemon_data/Pokemon_with_correct_pkmn_numbers.csv')
 pkmn.rename(columns=(
-                    {'#':'Number', 'Total':'Total Stats'}),
+                    {'#':'Pokemon ID', 'Total':'Total Stats'}),
             inplace=True)
-# Usually rows in a Pandas dataframe (df) start at 0, but pokemon numbers 
+# Usually rows in a Pandas dataframe (df) start at 0, but Pokemon IDs 
 # start at 1.  The next line of code makes the df row index start at 1 
 # and this will help us with joins later.  (joining pkmn and combats tables)
 pkmn.index = pkmn.index + 1
@@ -72,11 +73,11 @@ combats = pd.read_csv("./pokemon_data/combats.csv")
 pkmn.head()
 
 # %% [markdown]
-# Note that values in the Number column are not unique, as pokemon like Venusaur and Mega Venusaur both have Number 3, but their row index is unique.  This is important bc our combats data keeps track of winners using a pokemon's row index, NOT its pokemon number.  
+# Note that values in the Number column are not unique, as pokemon like Venusaur and Mega Venusaur both have Number 3, but their row index is unique.  This is important bc our combats data keeps track of winners using a pokemon's row index, NOT its Pokemon ID.  
 
 # %%
 print(F"The pkmn df has row index starting at {pkmn.index.min()} and ending at {pkmn.index.max()}")
-print(F"While the min pkmn. Number is {pkmn.Number.min()} and the max pkmn.Number is {pkmn.Number.max()}")
+print(F"While the min pkmn. Number is {pkmn['Pokemon ID'].min()} and the max pkmn.Number is {pkmn['Pokemon ID'].max()}")
 
 # %% [markdown]
 # Further proof that pokemon numbers are NOT unique, while row indexes are unique.
@@ -169,7 +170,7 @@ most_corr_num_features = pkmn_corr['Legendary'].sort_values(ascending=False)[1:7
 #                              hue='Legendary');
 
 # %%
-new_df = pkmn_join[['Number',
+new_df = pkmn_join[['Pokemon ID',
                     'HP',
                     'Attack',
                     'Defense',
@@ -181,20 +182,72 @@ new_df = pkmn_join[['Number',
 
 sns.pairplot(data=new_df, 
              hue='Legendary',
-             y_vars='Number')
+             y_vars='Pokemon ID')
 plt.savefig("/users/rancher/Google Drive/Coding/website/github_pages/images/pokemon_classifier/pairplots.png");
+
+# %%
+features_names = ['HP',
+               'Attack',
+               'Defense',
+               'Sp. Atk',
+               'Sp. Def',
+               'Speed',
+               'Wins',
+               'Legendary']
+
+X = pkmn_join[features_names].copy(deep=True)
+y = pkmn_join[['Pokemon ID']].copy(deep=True)
+
+
+data = pd.concat([X, y], axis=1)
+
+
+y_name = 'Pokemon ID'
+#features_names = [f'feature_{i}' for i in range(1, X.shape[1]+1)]  
+#column_names = features_names + [y_name]
+#data.columns = column_names
+
+plot_size=6
+num_plots_x=3   # No. of plots in every row
+num_plots_y = math.ceil((X.shape[1]-1)/num_plots_x)   # No. of plots in y direction
+
+'''
+for i in range(num_plots_y):
+    start = i * num_plots_x
+    end = start + num_plots_x
+    sns.pairplot(x_vars=features_names[start:end], y_vars=y_name, data=data)
+'''
+
+g = sns.FacetGrid(pd.DataFrame(features_names[:-1]), col=0, col_wrap=3, sharex=False, height=4, aspect=1)
+for ax, x_var in zip(g.axes, features_names[:-1]):
+    sns.scatterplot(data=data, x=x_var, y=y_name, ax=ax, hue='Legendary', legend=True)
+
+    
+legend_labels  = ['Legendary', 'Non-Legendary']
+    
+    
+g.tight_layout()
+
+current_fig = plt.gcf()
+
+current_fig.legend(labels=legend_labels)
+
+
+#g.add_legend(legend_data={'Legendary':'a', 'Non-Legendary':'b'})
+plt.savefig('/Users/rancher/Google Drive/Coding/website/github_pages/images/pokemon_classifier/scatterplots1.png', bbox_inches='tight')
+plt.show()
 
 # %% [markdown]
 # For all plots, we see a tendency for legendary Pokémon to cluster in the right side of each scatter plot, indicating that legendary Pokémon tend to have high stats as compared to non-legendary pokemon.  These predictors are probably going to be the most important for our model's performance.
 
 # %%
-new_df = pkmn_join[['Number',
+new_df = pkmn_join[['Pokemon ID',
                     'Total Stats',
                     'Legendary']]
 
 sns.scatterplot(data=new_df, 
              hue='Legendary',
-             y='Number',
+             y='Pokemon ID',
              x='Total Stats')
 plt.savefig("/users/rancher/Google Drive/Coding/website/github_pages/images/pokemon_classifier/pairplot_total_stats.png");
 
@@ -288,7 +341,7 @@ categorical_cols = pkmn_join_copy.loc[:, ['Type 1', 'Type 2']]
 categorical_cols_labels = list(categorical_cols.columns)
 orig_with_dummies = pd.get_dummies(
                                     pkmn_join.drop(
-                                        ['Number', 'Name', 'Legendary'], 
+                                        ['Pokemon ID', 'Name', 'Legendary'], 
                                         axis=1), 
                                     columns=categorical_cols_labels
                                     )
@@ -1444,5 +1497,3 @@ ax[1,1].get_yaxis().set_visible(False)
 plt.tight_layout()
 
 plt.savefig("/users/rancher/Google Drive/Coding/website/github_pages/images/pokemon_classifier/smote_summary.png", bbox_inches="tight");
-
-# %%

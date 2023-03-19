@@ -1,4 +1,4 @@
-,Number,Name,Type 1,Type 2,Total Stats,HP,Attack,Defense,Sp. Atk,Sp. Def,Speed,Generation,Legendary,Wins
+,Pokemon ID,Name,Type 1,Type 2,Total Stats,HP,Attack,Defense,Sp. Atk,Sp. Def,Speed,Generation,Legendary,Wins
 1,1,Bulbasaur,Grass,Poison,318,45,49,49,65,65,45,1,False,37.0
 2,2,Ivysaur,Grass,Poison,405,60,62,63,80,80,60,1,False,46.0
 3,3,Venusaur,Grass,Poison,525,80,82,83,100,100,80,1,False,89.0
